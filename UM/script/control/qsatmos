@@ -1,0 +1,557 @@
+#!/bin/ksh
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+#
+#  Script:  qsatmos
+#
+#  Purpose:  Performs history file processing and dump setup from 
+#            initial data, imported data and ancillary fields.
+#            Executes the loadmodule for UM model run.
+#            Initiates automatic output processing system in parallel
+#            with the model run.
+#
+#  Code Owner: See Unified Model Code Owner's HTML page
+#  This file belongs in section: Scripts
+#
+#  Programming Standard: UMDP 3 version unknown
+#
+#  External documentation:
+#    UMDP number X6
+#
+# Interface and Arguments:   qsatmos run_id
+#
+#     {run_id} ::= 5 character run identifier
+#
+#   -------------------------------------------------------------------
+#
+#   Called by: qsmaster
+#   Calls:     qsserver script
+#              make_parexe.pl script
+#
+#  Imports:
+
+#    AUTO_RESTART    - flag to indicate if automatic resubmission 
+#                      has been enabled
+#    AUTOMATIC_PP    - flag to activate automatic output processing
+#    BAS_IND         - Ocean basin indices file pathname
+#    SETOPT          - shell options
+#    COREDUMP        - filename that core file is saved to (full path)
+#    CRERRDIR        - directory for error logs etc
+#    DATAM           - directory name in which model executes
+#    DATAW           -
+#    E_ABORT         - error return code (abort condition)
+#    ERRFLAG         - Error flag file
+#    EXITSTAT        - controls history file post-processing in qsfinal
+#    HKFILE          - operational housekeeping filename
+#    INITHIS         - Initial history filename
+#    LOADMODULE      - load module for UM
+#    LOGNAME         - global variable containing userid
+#    LWSPECTD        - Long wave spectral file
+#    NAMELIST        - NAMELIST input file pathname
+#    NPROC_MAX       - TOTAL number of PEs requested by the (coupled) model 
+#                      + I/O system
+#    OASIS           - Flag to indicate an OASIS-based coupled run
+#    OBS01-10        - obs files 1-10
+#    OPERATIONAL     - operational flag
+#    OPSTARTDIR      - directory to hold re-start details
+#    OPSYSERR        - directory re-start dets after a system error
+#    OUTPUT          - printed output filename
+#    OUTPUT2         - extra printed output file pathname
+#    XHIST           - main history filename
+#    PPXREFU         - User supplied PP cross-reference file
+#    PURGEHIST       - flag to delete old history file if NRUN
+#    QSUB_REQNAME    - global variable containing jobid
+#    REMOTE_SHELL_CMD - Command used to run a command on a remote host
+#    RUNID           - Experiment/job ie abcde
+#    SAVECORE        - true to save any core file produced
+#    SERVEROUT       - qsserver output file
+#    STACK           - Stack limit for Linux UM jobs
+#    STASHCTL        - STASH control file pathname
+#    STASHMSTR       - STASHmaster file
+#    SWSPECTD        - Short wave spectral file
+#    THIST           - temporary history filename
+#    TYPE            - run type (NRUN or CRUN)
+#    UM_ATM_PE_DIST  - override PE distribution when running multinode
+#    UMMACHINE       - machine the UM is run on
+#    UM_NPES         - Number of PEs on which to run the atmos model
+#
+#  Exports:
+#    APSUM1,APSTMP1- partial sum dump files (period 1- atmosphere)
+#    ASWAP         - atmos swapping files (coupled mode)
+#    CACHE1,CACHE2 - cache files for assimilation/physics code
+#    ATMOS_RESUB_FILE - name of file holding auto-resubmission flag
+#                       at end of job chunk.
+#    FILENV        - FORTRAN file environment
+#    LOCKFILE      - Lock file indicates model executing to qsserver
+#    UNIT01        - General Housekeeping File
+#    UNIT02        - User stash list.
+#    UNIT04        - Stash control file pathname
+#    UNIT05        - Namelist pathname
+#    UNIT07        - Error output for operators - operational model
+#    UNIT08        - File for communication with qsserver
+#    UNIT10        - Permanent history file pathname
+#    UNIT11        - Interim history file pathname
+#    UNIT12        - Temporary history file pathname
+#    UNIT14        - Error flag file pathname
+#    UNIT15        - Temporary cache file for assimilation
+#    UNIT22        - Stashmaster file pathname
+#    UNIT57        - Shortwave Spectral file pathname
+#    UNIT58        - Ocean basin indices file pathname
+#    UNIT70-UNIT79 - OBS file pathnames
+#    UNIT80        - Longwave Spectral file pathname
+#    F_SETBUF152   - Buffer size of output Fortran Unit (NEC only)
+#    UNIT165-169   - UKCA_RADAER file pathnames
+#
+#
+#  Local Variables:
+#    ARCHERR       - logical to indicate when run has failed due to
+#                    an archive error (set to false by default)
+#    ARG1          - Argument passed in as $1
+#    CACHED        - cache file for diagnostic increments of pr fields
+#    CRMSGFILE     -
+#    ERRTYPE       - holds the reason for failure of the run (string)
+#    OPSR          - logical to indicate when run has failed due to
+#                    an operator stoprun (set to false be default)
+#    PAREXE        - name of exec created by make_parexe
+#    UM_COMMS_FILE - file for communication with qsserver
+#    PWD           - pwd
+#    RCSERVER      - return code for server
+#    RMSERVER      - message in errflag on return from qsserver.
+#    RUN_DETS      - QSUB_REQID,LOGNAME and RUNID to standardise msgs
+#    QSSPID        - process id of the spawned qsserver process
+#
+# End of header -------------------------------------------------------
+#L
+#L----------------------------------------------------------------------
+#L Step 0 - Set up environment variables
+#L----------------------------------------------------------------------
+
+set -$SETOPT
+
+# Model Run variables
+ARG1=$1
+#
+SAVECORE=${SAVECORE:-false}
+if [[ $IBM = true ]]; then
+  COREDUMP={COREDUMP:-$UM_TMPDIR//UMcore$$}
+else
+COREDUMP=${COREDUMP:-/tmp/UMcore$$}
+fi
+#
+APSUM1=$DATAW/$RUNID.apsum1     # Partial sum (period 1 atmos)
+APSTMP1=$DATAW/$RUNID.apstmp1   # Alternate partial sum (period 1)
+ASWAP=$UM_TMPDIR/$RUNID.aswap       # Temp file for coupled model swaps (A)
+CACHE1=$UM_TMPDIR/$RUNID.cache1     # Temp file for memory cache
+CACHE2=$UM_TMPDIR/$RUNID.cache2     # Temp file for memory cache
+CACHED=$UM_TMPDIR/$RUNID.cached     # Temp file for memory cache
+UM_COMMS_FILE=$UM_TMPDIR/$RUNID.comms.$$
+TOUCH=`which touch || echo /bin/touch` # Executable to make files
+export APSUM1 APSTMP1 ASWAP CACHE1 CACHE2
+#
+LOCKFILE=$UM_TMPDIR/$RUNID.lock.$$
+export LOCKFILE
+PWD=`pwd`
+
+#---------------------------------
+# Step 1: Identify whether to start from restart file or initial start file
+#---------------------------------
+if test $TYPE != "CRUN"
+then
+  # For NRUNS use INITHIS file to initialise model
+  cp $INITHIS $XHIST
+fi
+
+#-------------------------------------------------
+# Step 2: Run model
+#-------------------------------------------------
+
+echo
+echo "$0: Executing model run"
+echo
+echo "*********************************************************"
+echo "UM Executable : $LOADMODULE"
+echo "*********************************************************"
+echo    
+echo
+
+echo " " >> $OUTPUT
+echo " ============================================================================== " >> $OUTPUT
+echo " =============================== UM RUN OUTPUT ================================ " >> $OUTPUT
+echo " ============================================================================== " >> $OUTPUT
+
+# Setup Mulitnode variables if needed. NEC only.
+if [[ $UMMACHINE = NECSX6 ]]; then
+  if [[ $NPROC_MAX -gt 8 ]]; then    
+    # Running on more than one node
+    UM_ATM_PE_DIST=${UM_ATM_PE_DIST:=default}
+    if [[ $UM_ATM_PE_DIST = default ]] ; then
+      # If $UM_ATM_PE_DIST is not set, then the UMUI will only 
+      # allow multiples of 7 or 8 for multinode running.
+
+      integer num_full_nodes
+      integer n=0
+
+      # Multiples of 8 and 7
+      ((remainder_full=$NPROC_MAX%8))
+      ((remainder_partial=$NPROC_MAX%7))
+
+      if [[ $remainder_full -eq 0 ]]; then
+        # We have a multiple of 8
+        integer num_CPUs=8
+
+      elif [[ $remainder_partial -eq 0 ]]; then
+        # We have a multiple of 7
+        integer num_CPUs=7
+      else
+        echo "ERROR: Setting up mpirun string for multinode job"
+        echo "Total number of CPUs requested ($NPROC_MAX) is not"
+        echo "divisable by 7 or 8."
+        echo "The total number of CPUs must be divisable by 7"
+        echo "or 8 to fully utilise the NEC-SX6.  Please go back"
+        echo "to the UMUI and adjust accordingly"
+        exit 7
+      fi
+
+      ((num_full_nodes=$NPROC_MAX / $num_CPUs))
+
+      # Create mpi_string.
+      while (( n <= $num_full_nodes-1 ))
+      do
+        mpi_string="$mpi_string -host $n -np $num_CPUs"
+        ((n=n+1))
+      done
+    else
+      # If running multinode and $UM_ATM_PE_DIST is set, 
+      # then we override the default distribution and 
+      # distribute the number of CPUs per node accordingly.
+      integer n=0
+      integer tot_CPUs=0
+      for num_CPUs in $UM_ATM_PE_DIST ; do 
+        mpi_string="$mpi_string -host $n -np $num_CPUs"
+	((tot_CPUs=$tot_CPUs+$num_CPUs))
+        ((n=n+1))
+      done
+      # Check that mpi_string is for the correct number of PEs
+      if [[ $tot_CPUs -ne $NPROC_MAX ]] ; then
+        echo "ERROR: Setting up mpirun string for multinode job"
+        echo "Total of values is user defined CPU distribution"
+	echo "(UM_ATM_PE_DIST) does not match requested number"
+	echo "of CPUs (NPROC_MAX)."
+	echo "UM_ATM_PE_DIST = "$UM_ATM_PE_DIST
+	echo "NPROC_MAX = "$NPROC_MAX
+	exit 7
+      fi
+    fi
+  else
+    # Less than 9 CPUs
+      mpi_string="-np $NPROC_MAX"
+  fi
+  echo "Running mpirun : $mpi_string"
+fi
+
+#-------------------------------------------------
+# Step 2C - Run-time files and their respective FORTRAN units
+#-------------------------------------------------
+# History/control files including diagnostic control file
+#
+UNIT01=$HKFILE
+UNIT02=$PPXREFU
+UNIT04=$STASHCTL
+UNIT05=$NAMELIST
+UNIT07=$OUTPUT2
+UNIT22=$STASHMSTR
+UNIT10=$ATMOS_RESUB_FILE
+UNIT11=$XHIST
+UNIT12=$THIST
+UNIT14=$ERRFLAG
+UNIT15=$CACHE1
+export UNIT01 UNIT02 UNIT04 UNIT05 UNIT07 UNIT10 UNIT11
+export UNIT12 UNIT14 UNIT15
+export UNIT22
+#
+# Spectral files
+#
+UNIT57=$SWSPECTD
+UNIT80=$LWSPECTD
+export UNIT57 UNIT80
+# Ocean basin indices file
+#
+UNIT58=$BAS_IND
+export UNIT58
+#
+# UKCA_RADAER files
+#
+UNIT165=$UKCAPREC
+UNIT166=$UKCAACSW
+UNIT167=$UKCAACLW
+UNIT168=$UKCACRSW
+UNIT169=$UKCACRLW
+export UNIT165 UNIT166 UNIT167 UNIT168 UNIT169
+  
+#-------------------------------------------------
+# Step 2E - Execute load module, appending standard output to OUTPUT
+#          with output processing performed by server process if req.
+#          (model executes in directory $DATAM as specified in job)
+#-------------------------------------------------
+
+cd $DATAM
+CC=$?
+if [[ $CC -ne 0 ]]
+then
+  echo $0 : cd to $DATAM has failed
+  exit $CC
+fi
+export DATAM
+PWD=`pwd`        # track changes for the make_parexe script
+#
+#L  Set error flag to false ie model to run; remove XHIST
+#
+
+cat > $ERRFLAG << EOF
+F  No request to stop model
+EOF
+
+echo >>$OUTPUT
+echo 'qsatmos: %MODEL% output follows:-' >>$OUTPUT
+echo >>$OUTPUT
+
+if test -x $LOADMODULE # test loadmodule exists with excute permission
+then
+
+  if $AUTOMATIC_PP
+  then
+    retry=5
+    while test $retry -gt 0
+    do
+      ${TOUCH} ${UM_COMMS_FILE} 
+      rc=$?
+      if test $rc -ne 0
+      then
+        retry=`expr $retry "-" 1`
+        echo "qsatmos: ${TOUCH} fails to create comms file to archiving system"
+        if test $retry -gt 0
+        then
+          echo "        Retrying to create comms file ..."
+          sleep 60
+        else
+          echo "        Exiting ..."
+          exit $rc
+        fi
+      else
+        retry=0
+      fi
+    done
+    rm $SERVEROUT 2>/dev/null          # Clear server output file
+    qsserver ${UM_COMMS_FILE} T |tee $SERVEROUT &     # Start background server process
+                                       # to read from um_comms_file
+    QSSPID=$!
+    UNIT08=${UM_COMMS_FILE}
+    ${TOUCH} ${LOCKFILE}     # Create LOCKFILE to indicate model executing
+  else
+    if [[ $LINUX = true ]]; then
+      UNIT08=${UM_COMMS_FILE}
+    else
+      UNIT08=/dev/null
+    fi
+  fi
+  export UNIT08
+
+  if [[ $MPP = true && $CRAYMPP != true ]]; then
+    UNIT05=$NAMELIST  # parallel code reads namelist explicitly from
+    export UNIT05     # unit05 rather that stdin
+
+    # set up special executable for parallel code : parexe
+    # this sets up the correct enviroment before calling the
+    # normal executable
+    PAREXE=$DATAW/$RUNID.parexe.$$
+    export PAREXE     # still required for um_shell (though obsolete)
+
+    # Call the perl script to create the parexe file
+    # Only Linux and NEC need it
+    # Only Linux requires the stack argument
+    if [[ $LINUX = true ]]; then
+      echo "qsatmos: Stack requested for UM job: $STACK GB" >> $OUTPUT
+      make_parexe.pl -c $PAREXE -x $LOADMODULE -p $PWD -s $STACK
+      chmod u+x $PAREXE
+    elif [[ $NECMPP = true ]]; then
+      make_parexe.pl -c $PAREXE -x $LOADMODULE -p $PWD
+      chmod u+x $PAREXE
+    fi
+  fi
+
+  if [[ $CRAYMPP = true ]]; then
+    #run without server process
+    mpprun -n$NPROC_MAX $LOADMODULE >> $OUTPUT
+  elif [[ $NECMPP = true ]]; then
+    if [[ "$OASIS" = true ]]; then
+      mpiexec -configfile OASIScoupled.conf  >> $OUTPUT
+    else
+      mpirun $mpi_string $PAREXE >> $OUTPUT
+    fi	        
+  elif [[ $IBM = true ]]; then   
+    if [[ "$OASIS" = true ]]; then
+      poe -pgmmodel mpmd -cmdfile OASIScoupled.conf >> $OUTPUT
+    else
+      poe $LOADMODULE -procs $NPROC_MAX  >>$OUTPUT
+    fi
+  elif [[ $LINUXMPP = true ]]; then
+    ulimit -s unlimited
+    if [[ "$OASIS" = true ]]; then
+      mpiexec -configfile OASIScoupled.conf  >> $OUTPUT
+    else
+
+      # Background the job and wait to prevent control
+      # returning to the submit scripts prematurely.
+      # Needed by some multi-stage jobs when submitting with the at command.
+      mpiexec -np $NPROC_MAX $LOADMODULE >>$OUTPUT
+    fi
+  else
+    $LOADMODULE >>$OUTPUT #run without server process
+  fi
+
+  CC=$?        # Start model, reading from input NAMELIST and writing
+               # output processing requests (indicated by %%%) to
+               # UM_COMMS_FILE on unit 8.  Normal output is added to $OUTPUT.
+  FILENV=$FILENV_TEMP # restore the original FILENV.
+
+  if [[ x$PAREXE != "x" ]]; then  
+    if test -f $PAREXE; then    # Remove PAREXE file if it exists
+      rm $PAREXE
+    fi
+  fi
+
+  if $AUTOMATIC_PP
+  then
+    rm ${LOCKFILE}   # Remove LOCKFILE to indicate model completed
+    echo qsatmos: waiting for qsserver to complete on pid $QSSPID
+    wait $QSSPID                         # Wait for server to complete
+    RCSERVER=`cat $ERRFLAG|cut -c 1`     # return code from server
+    RMSERVER=`cat $ERRFLAG|cut -c 3-80`  # message from server
+  fi
+
+else
+  echo "qsatmos : error loadmodule $LOADMODULE not found or has "\
+       "wrong permissions" >>$OUTPUT
+  exit 135
+fi
+
+#-------------------------------------------------
+# Step 2F - If the model failed, then the main thing to worry about
+#           is if it failed while writing history files as this
+#           would foul up a restart attempt.
+#-------------------------------------------------
+if $OPERATIONAL
+then
+  :
+else
+  >$EXITSTAT                # Null file indicates normal condition
+  if test $CC -ne 0
+  then
+      echo "Failed in model executable" >>$EXITSTAT
+  fi
+
+  if test -s $THIST
+  then
+    diff $XHIST $THIST >/dev/null
+    CC=$?
+    # The thist is a backup copy of the history files. If the xhist
+    # and thist files are different it means that failure occurred
+    # writing one or other of the files. This ought to be an unlikely
+    # occurrence. If it happens the job owner will need to investigate.
+    if test $CC -ne 0  # differences found
+    then
+      echo "qsatmos: Serious inconsistency in history files"
+      echo "Check files before attempting to resubmit job"
+      echo "$XHIST and $THIST differ"
+    else
+	# Remove thist file - presence of thist when next run
+	# starts would indicate a crash and a requirement to
+	# tidy up archiving
+	rm $THIST
+    fi
+  fi
+fi
+
+#------------------------------------------------------------------
+# Step 2G - If run failed, output debug and return completion code;
+#           If run worked, delete temporary history file.
+#------------------------------------------------------------------
+if test $UMMACHINE = 'NECSX6' ; then
+
+  CRMSGFILE=$CRERRDIR/`date '+%a'`
+
+  ERRTYPE=''        # initialise ERRTYPE message string as empty
+  OPSR=false        # set OP(erator)S(top)R(un) to false by default
+  ARCHERR=false     # set ARCH(ive)ERR(or) to false be default
+  QSUB_REQNAME=$PBS_JOBNAME
+  RUN_DETS=" $QSUB_REQNAME,$LOGNAME,$RUNID "
+  # Move restartinfo to $OPSYSERR if :-
+  #             1)CRUN and AUTOPP_RESTART is true
+  #             2)Model is closing cleanly
+  #             3)Model has failed or Archiving has failed
+fi
+
+if test $CC -ne 0
+then
+  echo "$ARG1: Run failed"
+  if test $UMMACHINE = 'NECSX6' ; then
+    if test $TYPE = 'CRUN' and $AUTO_RESTART = 'true'
+    then
+      echo "Model failure:restart file moved to $OPSYSERR"
+      mv $OPSTARTDIR/"$RUNID"* $OPSYSERR
+    fi
+  fi
+  exit $CC
+
+else
+  if $AUTOMATIC_PP
+  then
+    if test $RCSERVER = "T"
+    then
+      echo "========================================================="
+      echo "$ARG1: $RMSERVER"
+      echo "========================================================="
+
+      if test $UMMACHINE = 'NECSX6' ; then
+
+        # Determine the reason for failure of the run i.e. archive or
+        # stoprun.  Set ERRTYPE to the appropriate message string.
+        if [[ "$RMSERVER" = *"stoprun:"* ]]
+        then
+          if [[ "$RMSERVER" = *"User"* ]]
+          then
+            ERRTYPE='Caused by a user stoprun.'
+          else
+            ERRTYPE='Caused by an operator stoprun'
+            OPSR=true
+          fi
+        else
+          if [[ "$ARCHSYS" = "true" ]]
+          then
+            ERRTYPE='Problem transferring data to MASS.'
+          fi
+          echo $ERRTYPE
+          ARCHERR=true
+        fi
+
+        if test $ARCHERR = 'true'
+        then
+          if test $TYPE = 'CRUN' and $AUTO_RESTART = 'true'
+          then
+            echo "Archiving failure:restart file moved to $OPARCHERR"
+            mv $OPSTARTDIR/"$RUNID"* $OPARCHERR
+          fi
+        fi  # $ARCHERR = 'true'
+      fi                          # UMMACHINE = METO / NEC
+    else                        # RCSERVER = T
+      echo "$ARG1: Run terminated normally"
+    fi
+  else                          # Not AUTOMATIC_PP
+    echo "$ARG1: Run terminated normally"
+  fi                            # AUTOMATIC_PP
+fi                              # $CC != 0
+
+#L----------------------------------------------------------------------

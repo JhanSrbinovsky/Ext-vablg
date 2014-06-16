@@ -1,0 +1,304 @@
+#!/bin/ksh
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+#
+#  Script:  qsOASISsetup
+#
+#  Purpose:  Performs OASIS setup for coupled models
+#
+#  Code Owner: See Unified Model Code Owner's HTML page
+#  This file belongs in section: Scripts
+#
+#  Programming Standard: UMDP 3 version unknown
+#
+#  External documentation:
+#    <UMDP number & name of external documentation> Y1 ?
+#
+# Interface and Arguments:   qsOASISsetup
+#
+#   -------------------------------------------------------------------
+#
+#   Called by: qsmaster
+#   Calls:     qsnemosetup script
+#              qscicesetup script
+#              OASIS3_ctl script
+#              OASIS_conf script
+#
+#  Imports:
+
+#    DATAM            - directory name in which model executes
+#    HADGEM3_COUPLED  - Flag to indicate fully coupled HadGEM3 run
+#    LOADMODULE       - load module for UM
+#    NEMO_CPL_TYPE    - Coupling type for NEMO
+#    NEMO_NPROC       - Number of processes required for NEMO
+#    OCNMODULE        - load module for Ocean (for coupled case)
+#    PRISM_HOME       - Location of PRISM
+#    PRISM_NPROC      - Number of PEs running PRISM
+#    UM_NPES          - Number of PEs on which to run UM atmos
+#    NPROC_MAX        - Number of PEs on which to run UM (including IOS)
+#    OASIS_MPI_TYPE   - OASIS format MPI1 or MPI2. 
+#    CPL_TASK_SPACING - Periodic task spacing for O3-MCT memory balancing
+#
+#  Exports:
+#    LOCAL_ATM        - OASIS atmosphere component name
+#    LOCAL_OCN        - OASIS ocean component name
+#    O3               - OASIS3 component name
+#
+#
+#  Local Variables:
+#    MACHINE_TYPE     - Single character representation if IBM (I) or NEC (N)
+#    OCN_NPROC        - Number of processes required for Ocean model
+#                       Set to $NEMO_NPROC for HADGEM3_COUPLED jobs
+#    OCN_CPL_TYPE     - Coupling type for Ocean model
+#                       Set to $NEMO_CPL_TYPE for HADGEM3_COUPLED jobs
+#
+# End of header -------------------------------------------------------
+#L
+
+
+set -$SETOPTS
+echo  qsoassissetup: UM_NPES=$UM_NPES
+echo  qsoassissetup: NPROC_MAX=$NPROC_MAX
+echo  qsoassissetup: UM_NPES=$UM_NPES
+echo  qsoassissetup: NEMO_NPROC=$NEMO_NPROC
+echo  qsoassissetup: NEMO_CPL_TYPE=$NEMO_CPL_TYPE
+echo  qsoassissetup: PRISM_NPROC=$PRISM_NPROC
+
+CPL_TASK_SPACING=${CPL_TASK_SPACING:=0}
+
+cd $DATAM
+CC=$?
+if [[ $CC -ne 0 ]]
+then
+  echo $0 : cd to $DATAM has failed
+  exit $CC
+fi
+
+if [[ "$HADGEM3_COUPLED" = true ]]; then
+   # Execute NEMO/CICE setup scripts for the HadGEM3-AO Coupled model
+   qsnemosetup
+   rc=$?
+   if test $rc -ne 0
+   then
+      echo "qsOASISsetup: problem executing NEMO setup script"
+      exit 1
+   fi
+   OCN_NPROC=$NEMO_NPROC
+   OCN_CPL_TYPE=$NEMO_CPL_TYPE
+   
+   qscicesetup
+   if test $rc -ne 0
+   then
+      echo "qsOASISsetup: problem executing CICE setup script"
+      exit 1
+   fi
+else
+   #NPROC and CPL_TYPE must be set to something for Coupled models run without NEMO.
+   OCN_NPROC=${OCN_NPROC:-${NEMO_NPROC}}
+   OCN_CPL_TYPE=${OCN_CPL_TYPE:-${NEMO_CPL_TYPE}}
+fi
+
+MACHINE_TYPE=" "
+
+if [[ $IBM = true ]]; then
+   MACHINE_TYPE="I"
+elif [[ $NECMPP = true ]]; then
+   MACHINE_TYPE="N"
+fi
+
+   # Set up OASIS3 coupling controls
+   # The names of the components are just silly  simple names
+   # because OASIS3 is extremely restricted in terms of what names
+   # you can use - names must be no more than 6 chars!
+  export LOCAL_ATM="toyatm"
+  export LOCAL_OCN="toyoce" 
+  export O3="oasis3"
+
+   # Clean up files left over from previous runs. 
+   # The Oasis.prt, cplout, namcouple and anaisout files
+   # include the * wildcard to cater for the possible use of 
+   # pseudo parallel OASIS3 which attaches processor rank IDs 
+   # to these file names.  
+  rm -f grids.nc
+  rm -f masks.nc
+  rm -f areas.nc
+  rm -f angles.nc
+
+  rm -f Oasis.prt*
+  rm -f *.prt?
+  rm -f cplout*
+  rm -f namcouple*
+  rm -f *fort*
+
+  if [ $PRISM_NPROC -lt 1 ] ; then
+    # Potential debug netcdf files from OASIS3-MCT runs
+    # will have the component name in the file name. We need to 
+    # ensure any existing files are deleted because OASIS3-MCT
+    # will otherwise just append new details to the existing files
+    # (because of the different way it handles buffer flushing etc
+    # cf. standard OASIS3.) 
+    rm -f *$LOCAL_ATM*.nc 
+    rm -f *$LOCAL_OCN*.nc   
+  fi
+
+    # Temporary files used in setting up parallel OASIS3 instances
+  temp_weights="ls_temp_weights" 
+  ln_weights="ln_temp_weights" 
+  ls_nam_temp="ls_namcouple"	      
+
+  rm -f $temp_weights 
+  rm -f $ln_weights 
+  rm -f $ls_namcouple 
+
+# No idea what the anaisout file is supposed to be for. 
+# It seems to be created in most runs (successful or otherwise)
+# and always has a size of zero. But OASIS3 will abort if it
+# finds an existing version of this file.
+  rm -f anaisout*
+  rm -f ?weights
+
+  if [ $PRISM_NPROC -gt 0 ] ; then
+    # Link to the OASIS3 driver executable
+    ln -s -f $PRISM_HOME/bin/oasis3.$OASIS_MPI_TYPE.x $O3
+  fi
+
+# Link to component executables with standard names.
+  ln -s -f $LOADMODULE  $LOCAL_ATM
+  ln -s -f $OCNMODULE $LOCAL_OCN
+
+  if [ $USE_GRIDS_DIRECT = true ] ; then
+
+# Link to input netcdf files containing our grid, mask and area
+# definitions with the special OASIS3 names to prevent re-creation of 
+# files during the run.
+
+    ln -s -f $NC_GRIDS grids.nc
+    ln -s -f $NC_MASKS masks.nc
+    ln -s -f $NC_AREAS areas.nc
+
+    if test -n "$NC_ANGLES"
+    then
+       ln -s -f $NC_ANGLES angles.nc
+    else
+       echo "No OASIS3 angles file will be used."
+    fi
+
+  else
+
+     # Link to input netcdf files containing our grid, mask and area
+     # definitions as specified by the user via the umui, read by the
+     # component models for use in prism grids writing calls.
+    ln -s -f $NC_GRIDS grids_in.nc
+    ln -s -f $NC_MASKS masks_in.nc
+    ln -s -f $NC_AREAS areas_in.nc
+
+    if test -n $NC_ANGLES
+    then
+      ln -s -f $NC_ANGLES angles_in.nc
+    else
+      echo "No user-defined angles file will be used."
+    fi
+ 
+  fi
+
+  echo "RMP_DIR : " $RMP_DIR
+
+  if test -d $RMP_DIR
+  then
+
+    rm -f rmp*.nc
+
+    echo "Linking to existing rmp_* files in directory " $RMP_DIR 
+    ln -s -f $RMP_DIR/rmp_* .
+
+    if [ $PRISM_NPROC -gt 0 ] ; then
+
+      # For each pseudo parallel OASIS3 instance, set up a 
+      # soft link to the existing rmp weights file with the  
+      # appropriate index number (note OASIS3 expects processor
+      # rank to start from 0). 
+
+      echo "# Link commands for OASIS3 remapping weights " > $ln_weights 
+      ls rmp*.nc > $temp_weights 
+      let i=0 
+
+      echo "PRISM_NPROC value is" $PRISM_NPROC
+
+      while [ $i -lt $PRISM_NPROC ] 
+      do 
+        awk -v i=$i 'BEGIN { FS=".nc" } { print "ln -s -f " $1 ".nc" , $1 "_" i ".nc" }' $temp_weights >> $ln_weights 
+        let i=${i}+1 
+      done 
+
+      chmod +x $ln_weights 
+      ./$ln_weights
+
+    fi       # PRISM_NPROC > 0 (i.e. non MCT case)
+
+  else
+   echo "******************************************************"
+   echo "No existing rmp* file directory specified"
+   echo "Any existing rmp* files will be removed from" $RUNDIR
+   echo "for safety"
+   echo "Generating rmp* files at run time"
+   echo "NOTE: This will vastly increase your required run time"
+   echo "******************************************************"
+   rm -f rmp*.nc
+  fi
+
+  if [ $PRISM_NPROC -gt 0 ] ; then
+
+    # Link to the netcdf field description files which 
+    # the OASIS3 driver requires. No point copying it, 
+    # but it does assume the file lives with the namcouple 
+    # file which is not necessarily the case. We just need
+    # to take a view on what to do as standard practice. 
+    ln -s -f $NAMCOUPLE_HOME/cf_name_table.txt .
+
+    # List all the namcouple files
+    cp $NAMCOUPLE_HOME/$NAMCOUPLE_STUB* .
+    ls $NAMCOUPLE_STUB* > $ls_nam_temp
+
+    # Set them up in an array of file names
+    set -A nam_array $(<$ls_nam_temp)
+    # For each OASIS3 process
+    let i=0
+
+    # OASIS3 case
+    while [ $i -lt $PRISM_NPROC ]
+    do
+
+      # Copy each namcouple file to working directory
+      mv ${nam_array[$i]} nam_temp
+
+      # Check integrity of namcouple and update where necessary
+      OASIS3_ctl nam_temp $LOCAL_ATM $NPROC_MAX $UM_NPES $LOCAL_OCN $OCN_NPROC \
+		    $ATM_CPL_TYPE $OCN_CPL_TYPE
+
+      # Copy each namcouple file to give it the name which
+      # OASIS3 expects.
+      mv namcouple namcouple_${i}
+      let i=${i}+1
+    done
+  else
+    # OASIS3-MCT case
+    # Copy the namcouple file to working directory
+    cp $NAMCOUPLE_HOME/$NAMCOUPLE_STUB*  nam_temp 
+
+    # Check integrity of namcouple and update where necessary
+    OASIS3_ctl nam_temp $LOCAL_ATM $NPROC_MAX $UM_NPES $LOCAL_OCN $OCN_NPROC \
+                        $ATM_CPL_TYPE $OCN_CPL_TYPE
+  fi
+
+  # Now call the routine to set up our transient field namelist
+  OASIS_fields
+
+   # Set up the MPMD controlling configuration file in the 
+   # appropriate form for the current platform and the 
+   # requested processor configuration. 
+  OASIS_conf $MACHINE_TYPE $LOCAL_ATM $NPROC_MAX $LOCAL_OCN $OCN_NPROC \
+	   $PRISM_NPROC $O3 $CPL_TASK_SPACING
+
