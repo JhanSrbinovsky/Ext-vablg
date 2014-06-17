@@ -6118,7 +6118,7 @@ END IF  !  sf(item,sect)
            IF (ICODE >  0) THEN
              write(cmessage,"(a,i3.3,a)")                                  &
      &         "imp_ctl  : error in set_pseudo_list(item ", vcode, " = tsoil_tile)"
-             goto 9999
+             return
            END IF
            PSLEVEL_OUT=0
            DO PSLEVEL=1,NTILES
@@ -6146,7 +6146,7 @@ END IF  !  sf(item,sect)
            IF (ICODE >  0) THEN
              write(cmessage,"(a,i3.3,a)")                                  &
      &         "imp_ctl  : error in set_pseudo_list(item ", vcode, " = smcl_tile)"
-             goto 9999
+             return
            END IF
            PSLEVEL_OUT=0
            DO PSLEVEL=1,NTILES
@@ -6174,7 +6174,7 @@ END IF  !  sf(item,sect)
            IF (ICODE >  0) THEN
              write(cmessage,"(a,i3.3,a)")                                  &
      &         "imp_ctl  : error in set_pseudo_list(item ", vcode, " = sthf_tile)"
-             goto 9999
+             return
            END IF
            PSLEVEL_OUT=0
            DO PSLEVEL=1,NTILES
@@ -6202,7 +6202,7 @@ END IF  !  sf(item,sect)
            IF (ICODE >  0) THEN
              write(cmessage,"(a,i3.3,a)")                                  &
      &         "imp_ctl  : error in set_pseudo_list(item ", vcode, " = snowdepth_tile)"
-             goto 9999
+             return
            END IF
            PSLEVEL_OUT=0
            DO PSLEVEL=1,NTILES
@@ -6230,7 +6230,7 @@ END IF  !  sf(item,sect)
            IF (ICODE >  0) THEN
              write(cmessage,"(a,i3.3,a)")                                  &
      &         "imp_ctl  : error in set_pseudo_list(item ", vcode, " = snowmass_tile)"
-             goto 9999
+             return
            END IF
            PSLEVEL_OUT=0
            DO PSLEVEL=1,NTILES
@@ -6258,7 +6258,7 @@ END IF  !  sf(item,sect)
            IF (ICODE >  0) THEN
              write(cmessage,"(a,i3.3,a)")                                  &
      &         "imp_ctl  : error in set_pseudo_list(item ", vcode, " = snowtmp_tile)"
-             goto 9999
+             return
            END IF
            PSLEVEL_OUT=0
            DO PSLEVEL=1,NTILES
@@ -6286,7 +6286,7 @@ END IF  !  sf(item,sect)
            IF (ICODE >  0) THEN
              write(cmessage,"(a,i3.3,a)")                                  &
      &         "imp_ctl  : error in set_pseudo_list(item ", vcode, " = snowrho3l_tile)"
-             goto 9999
+             return
            END IF
            PSLEVEL_OUT=0
            DO PSLEVEL=1,NTILES
@@ -6313,7 +6313,7 @@ END IF  !  sf(item,sect)
          IF (ICODE >  0) THEN
            write(cmessage,"(a,i3.3,a)")                                  &
      &       "imp_ctl  : error in set_pseudo_list(item ", vcode, " = snow_rho1l)"
-           goto 9999
+           return
          END IF
          PSLEVEL_OUT=0
          DO PSLEVEL=1,NTILES
@@ -6339,7 +6339,7 @@ END IF  !  sf(item,sect)
          IF (ICODE >  0) THEN
            write(cmessage,"(a,i3.3,a)")                                  &
      &       "imp_ctl  : error in set_pseudo_list(item ", vcode, " = snage_tile)"
-           goto 9999
+           return
          END IF
          PSLEVEL_OUT=0
          DO PSLEVEL=1,NTILES

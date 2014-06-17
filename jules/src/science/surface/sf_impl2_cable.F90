@@ -727,6 +727,8 @@ REAL(KIND=jprb)               :: zhook_handle
 
 IF (lhook) CALL dr_hook('SF_IMPL2',zhook_in,zhook_handle)
 
+!CABLE: satisfy intent(inout) nature
+radnet_tile=0.
 ! temporary timestep variable needed because JULES and UM have different
 ! names and types for the variable
 #if !defined(UM_JULES)
@@ -815,6 +817,7 @@ IF ( .NOT. l_correct ) THEN
     ENDDO
   ENDDO
 
+! DEPENDS ON:cable_implicit_driver
   call cable_implicit_driver( cable% um% LS_RAIN, cable% um% CONV_RAIN, &
                   cable% um% LS_SNOW, cable% um% CONV_SNOW, cable% im% dtl_1,  &
                   cable% im% dqw_1, cable% im% T_SOIL, cable%cable% TSOIL_TILE,&

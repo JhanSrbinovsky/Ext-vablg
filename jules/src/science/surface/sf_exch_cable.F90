@@ -900,6 +900,8 @@ REAL(KIND=jprb)               :: zhook_handle
 
 IF (lhook) CALL dr_hook('SF_EXCH',zhook_in,zhook_handle)
 
+!CABLE: satisfy intent(inout) nature. curiously local dec is REAL only
+radnet_tile=0.
 array_zero(:)=0.0
 array_one(:)=1.0
 array_negone(:)=-1.0
