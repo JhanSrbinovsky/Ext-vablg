@@ -37,6 +37,7 @@ MODULE cable_common_module
    !---total number of timesteps, and processing node 
    INTEGER, SAVE :: ktau_gl, kend_gl, knode_gl, kwidth_gl
    
+   logical :: L_fudge = .FALSE. 
    !---CABLE runtime switches def in this type
    TYPE kbl_internal_switches
       LOGICAL :: um = .FALSE., um_explicit = .FALSE., um_implicit = .FALSE.,   &

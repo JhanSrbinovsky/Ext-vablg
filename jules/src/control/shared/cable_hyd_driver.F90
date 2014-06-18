@@ -76,13 +76,14 @@ SUBROUTINE cable_hyd_driver( SNOW_TILE, LYING_SNOW, SURF_ROFF, SUB_SURF_ROFF,  &
       TOT_TFALL_TILE = UNPACK(canopy%through, um1%L_TILE_PTS, miss)
       TOT_TFALL      = SUM(um1%TILE_FRAC * TOT_TFALL_TILE,2)
       
-      call fudge_out( 1,1, snow_tile, 'snow_tile' )
-      call fudge_out( 1, lying_snow, 'lying_snow' )
-      call fudge_out( 1,1, surf_cab_roff, 'surf_cab_roff' )
-      call fudge_out( 1, surf_roff, 'surf_roff' )
-      call fudge_out( 1,1, TOT_TFALL_TILE, 'TOT_TFALL_TILE' )
-      call fudge_out( 1, TOT_TFALL, 'TOT_TFALL' )
-      
+      if(L_fudge) then
+         call fudge_out( 1,1, snow_tile, 'snow_tile' )
+         call fudge_out( 1, lying_snow, 'lying_snow' )
+         call fudge_out( 1,1, surf_cab_roff, 'surf_cab_roff' )
+         call fudge_out( 1, surf_roff, 'surf_roff' )
+         call fudge_out( 1,1, TOT_TFALL_TILE, 'TOT_TFALL_TILE' )
+         call fudge_out( 1, TOT_TFALL, 'TOT_TFALL' )
+      endif 
 END SUBROUTINE cable_hyd_driver
       
 
