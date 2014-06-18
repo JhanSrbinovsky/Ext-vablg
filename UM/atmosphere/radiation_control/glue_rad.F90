@@ -3173,7 +3173,6 @@ ipar=1
            + sw_tile(l,n) * tile_frac(l,n)
       END DO
     END DO
-print *, "jhan:glue_rad:3176"
 
 !   Set up net surface SW on sea ice categories.
 
@@ -3888,7 +3887,6 @@ print *, "jhan:glue_rad:3176"
         t_rad_land = SQRT( SQRT( t_rad_land / emis_land ) )
       END WHERE
 
-print *, "jhan:glue_rad:3891"
 
 ! Effective surface radiative temperature over sea ice
       t_rad_sice(:,:) = 0.0
@@ -4358,7 +4356,6 @@ ipar=1
             l_scale_inc = .TRUE.
 
 
-print *, "jhan:glue_rad:4360"
 ! DEPENDS ON: r2_lwrad3z
             CALL r2_lwrad3z(error_code,                                 &
 ! Input data
@@ -4513,7 +4510,6 @@ print *, "jhan:glue_rad:4360"
 
 !$OMP END PARALLEL
 
-print *, "jhan:glue_rad:4516"
 #if !defined(SCMA)
 
 ! Radiative fluxes may not have been calculated at all
