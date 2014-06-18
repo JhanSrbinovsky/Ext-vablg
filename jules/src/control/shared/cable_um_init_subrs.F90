@@ -182,10 +182,6 @@ SUBROUTINE initialize_soil( bexp, hcon, satcon, sathh, smvcst, smvcwt,         &
                            soil%isoilm, skip )
 
          !--- defined in soil_thick.h in UM
-print *, "jhan:init_subrs:shape(dzsoil) ", shape(dzsoil)
-print *, "jhan:init_subrs:dzsoil ", dzsoil
-print *, "jhan:init_subrs:shape(zse) ", shape(soil%zse)
-print *, "jhan:init_subrs:dzsoil ", soil%zse
          soil%zse = dzsoil
          
          ! distance between consecutive layer midpoints

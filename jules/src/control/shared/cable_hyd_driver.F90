@@ -60,18 +60,28 @@ SUBROUTINE cable_hyd_driver( SNOW_TILE, LYING_SNOW, SURF_ROFF, SUB_SURF_ROFF,  &
       SNOW_TILE= UNPACK(ssnow%snowd, um1%L_TILE_PTS, miss) 
       LYING_SNOW = SUM(um1%TILE_FRAC * SNOW_TILE,2) !gridbox snow mass
 
-      SURF_CAB_ROFF  = UNPACK(ssnow%rnof1, um1%L_TILE_PTS, miss)
-      SURF_ROFF      = SUM(um1%TILE_FRAC * SURF_CAB_ROFF,2)
+      !SURF_CAB_ROFF  = UNPACK(ssnow%rnof1, um1%L_TILE_PTS, miss)
+      !SURF_ROFF      = SUM(um1%TILE_FRAC * SURF_CAB_ROFF,2)
       
       ! Don't include sub-soil drainage for lakes
       ! NB: Hard-wired type to be removed in future version
       WHERE( veg%iveg == 16 ) ssnow%rnof2 = 0.0
   
-      SURF_CAB_ROFF  = UNPACK(ssnow%rnof2, um1%L_TILE_PTS, miss)
-      SUB_SURF_ROFF  = SUM(um1%TILE_FRAC * SURF_CAB_ROFF,2)
+      SURF_CAB_ROFF  = UNPACK(ssnow%rnof1, um1%L_TILE_PTS, miss)
+      SURF_ROFF      = SUM(um1%TILE_FRAC * SURF_CAB_ROFF,2)
+      
+      !SURF_CAB_ROFF  = UNPACK(ssnow%rnof2, um1%L_TILE_PTS, miss)
+      !SUB_SURF_ROFF  = SUM(um1%TILE_FRAC * SURF_CAB_ROFF,2)
 
       TOT_TFALL_TILE = UNPACK(canopy%through, um1%L_TILE_PTS, miss)
       TOT_TFALL      = SUM(um1%TILE_FRAC * TOT_TFALL_TILE,2)
+      
+      call fudge_out( 1,1, snow_tile, 'snow_tile' )
+      call fudge_out( 1, lying_snow, 'lying_snow' )
+      call fudge_out( 1,1, surf_cab_roff, 'surf_cab_roff' )
+      call fudge_out( 1, surf_roff, 'surf_roff' )
+      call fudge_out( 1,1, TOT_TFALL_TILE, 'TOT_TFALL_TILE' )
+      call fudge_out( 1, TOT_TFALL, 'TOT_TFALL' )
       
 END SUBROUTINE cable_hyd_driver
       

@@ -56,7 +56,8 @@ SUBROUTINE cable_expl_unpack( FTL_TILE, FQW_TILE,       &
    USE cable_data_module,   ONLY : PHYS
    USE cable_um_tech_mod,   ONLY : um1
    USE cable_common_module, ONLY : cable_runtime, cable_user, &
-                                   ktau_gl, knode_gl, kend_gl 
+                                   ktau_gl, knode_gl, kend_gl, &
+                                   fudge_out 
    IMPLICIT NONE         
 
 
@@ -214,6 +215,19 @@ SUBROUTINE cable_expl_unpack( FTL_TILE, FQW_TILE,       &
          first_cable_call = .FALSE.
       ENDIF
 
+      call fudge_out( 1,1, ftl_tile, 'ftl_tile' )
+      call fudge_out( 1,1, fqw_tile, 'fqw_tile' )
+      call fudge_out( 1,1, tstar_tile, 'tstar_tile' )
+      call fudge_out( 1,1, z0m_tile, 'z0m_tile' )
+      call fudge_out( 1,1, U_s_tile, 'U_s_tile' )
+      call fudge_out( 1,1, CD_tile, 'CD_tile' )
+      call fudge_out( 1,1, CH_tile, 'CH_tile' )
+      call fudge_out( 1,1, fraca, 'fraca' )
+      call fudge_out( 1,1, resft, 'resft' )
+      call fudge_out( 1,1, resfs, 'resfs' )
+      call fudge_out( 1,1, radnet_tile, 'radnet_tile' )
+      call fudge_out( 1,1, recip_L_MO_tile, 'recip_L_MO_tile' )
+      call fudge_out( 1,1, epot_tile, 'epot_tile' )
    
 END SUBROUTINE cable_expl_unpack
     
