@@ -1177,6 +1177,12 @@ END IF
 
   print *,"jhan:sf_exch_:POST cable_explicit"
 
+  !open(unit=122,file='sf_exch.theta.postCABLE'),status="unknown", &
+  !     action="write", iostat=gopenstatus, form="formatted", &
+  !     position='append' )
+  !     
+  !     WRITE(122,*) 'theta ',th
+  !close(122)     
 !-----------------------------------------------------------------------
 ! Calculate RESFT with neutral CH and EPDT=0 for use in calculation
 ! of Richardson number. RESFT=1 for snow and land-ice.
