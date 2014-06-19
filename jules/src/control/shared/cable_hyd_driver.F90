@@ -32,7 +32,7 @@
 ! ==============================================================================
 
 SUBROUTINE cable_hyd_driver( SNOW_TILE, LYING_SNOW, SURF_ROFF, SUB_SURF_ROFF,  &
-                             TOT_TFALL, WB_LAKE )
+                             TOT_TFALL)
 
    USE cable_data_module,   ONLY : PHYS, OTHER
    USE cable_common_module!, only : cable_runtime, cable_user
@@ -62,6 +62,10 @@ SUBROUTINE cable_hyd_driver( SNOW_TILE, LYING_SNOW, SURF_ROFF, SUB_SURF_ROFF,  &
 
       SURF_CAB_ROFF  = UNPACK(ssnow%rnof1, um1%L_TILE_PTS, miss)
       SURF_ROFF      = SUM(um1%TILE_FRAC * SURF_CAB_ROFF,2)
+     
+      ! Don't include sub-soil drainage for lakes
+      ! NB: Hard-wired type to be removed in future version
+      WHERE( veg%iveg == 16 ) ssnow%rnof2 = 0.0 
       
       SURF_CAB_ROFF  = UNPACK(ssnow%rnof2, um1%L_TILE_PTS, miss)
       SUB_SURF_ROFF  = SUM(um1%TILE_FRAC * SURF_CAB_ROFF,2)
