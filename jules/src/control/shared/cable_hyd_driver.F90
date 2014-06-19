@@ -52,10 +52,6 @@ SUBROUTINE cable_hyd_driver( SNOW_TILE, LYING_SNOW, SURF_ROFF, SUB_SURF_ROFF,  &
       SURF_CAB_ROFF,    &
       TOT_TFALL_TILE                
 
-   ! Lestevens 25sep13 - water balance fix for lakes
-   REAL, DIMENSION(um1%land_pts,um1%ntiles) ::                                 &
-      WB_LAKE         ! unpack CABLE wb_lake
-
    REAL :: miss =0. 
    REAL, POINTER :: TFRZ
       
@@ -70,14 +66,9 @@ SUBROUTINE cable_hyd_driver( SNOW_TILE, LYING_SNOW, SURF_ROFF, SUB_SURF_ROFF,  &
       SURF_CAB_ROFF  = UNPACK(ssnow%rnof2, um1%L_TILE_PTS, miss)
       SUB_SURF_ROFF  = SUM(um1%TILE_FRAC * SURF_CAB_ROFF,2)
 
-      ! %through is /dels in UM app. for STASH output  
-      canopy%through = canopy%through / kwidth_gl
       TOT_TFALL_TILE = UNPACK(canopy%through, um1%L_TILE_PTS, miss)
       TOT_TFALL      = SUM(um1%TILE_FRAC * TOT_TFALL_TILE,2)
 
-      ! Lest 25sep13 - wb_lake fix
-      WB_LAKE        = UNPACK(ssnow%wb_lake, um1%L_TILE_PTS, miss)
-      
       if(L_fudge) then
          call fudge_out( 1,1, snow_tile, 'snow_tile' )
          call fudge_out( 1, lying_snow, 'lying_snow' )
