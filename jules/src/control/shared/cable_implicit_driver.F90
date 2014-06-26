@@ -206,6 +206,10 @@ subroutine cable_implicit_driver( LS_RAIN, CON_RAIN, LS_SNOW, CONV_SNOW,       &
       !-------------------------------------------------------------------
       CALL um2cable_rr( (LS_RAIN+CON_RAIN)*um1%TIMESTEP, met%precip)
       CALL um2cable_rr( (LS_SNOW+CONV_SNOW)*um1%TIMESTEP, met%precip_sn)
+print *, "jhan:_impl:sh(dtl_1)", shape(dtl_1)
+print *, "jhan:_impl:sh(dqw_1)", shape(dqw_1)
+print *, "jhan:_impl:sh(dtlc)", shape(dtlc)
+print *, "jhan:_impl:sh(dqwc)", shape(dqwc)
       CALL um2cable_rr( dtl_1, dtlc)
       CALL um2cable_rr( dqw_1, dqwc)
       

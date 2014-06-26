@@ -1049,7 +1049,11 @@
 
 ! needed for vatpoles for fv_cos_theta_latitude vs cos_theta_latitude
 REAL, POINTER :: xx_cos_theta_latitude (:,:)
+logical :: write122=.false.
+logical :: write123=.false.
 
+lw_incs = 0.01
+   print *, "jhan:atmos_phys1:shape(lw_incs) ", shape(lw_incs)
       IF (lhook) CALL dr_hook('ATMOS_PHYSICS1',zhook_in,zhook_handle)
 
 IF ( l_vatpoles ) THEN
@@ -2061,7 +2065,18 @@ sea_salt: IF (((l_use_seasalt_direct .OR. l_use_seasalt_indirect).AND.  &
         LSPICE_DIM2 = rows
         LSPICE_DIM3 = wet_levels
 #endif
-
+if(write122) then
+   open(unit=122,file='atmos_ph1_inc.1',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,model_levels
+         do j=1,rows
+            do k=1,row_length
+               WRITE(122,*) 'theta ',theta_inc(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)   
+endif    
 ! DEPENDS ON: microphys_ctl
       Call microphys_ctl (                                              &
 
@@ -2149,6 +2164,19 @@ sea_salt: IF (((l_use_seasalt_direct .OR. l_use_seasalt_indirect).AND.  &
       DEALLOCATE(ext_tl)
       DEALLOCATE(ext_p_layer_centres)
 
+if(write122) then
+   open(unit=122,file='atmos_ph1_inc.2',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,model_levels
+         do j=1,rows
+            do k=1,row_length
+               WRITE(122,*) 'theta ',theta_inc(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)    
+endif
+if(mype==0 ) print *, "jhan:atmos_physics1:POST Ni_rad_ctl"
 ! DEPENDS ON: timer
       If (Ltimer) Call timer ('AP1 Microphys (AP1M)',6)
 
@@ -2476,6 +2504,18 @@ sea_salt: IF (((l_use_seasalt_direct .OR. l_use_seasalt_indirect).AND.  &
         l_use_ndrop = .TRUE.
       END IF
  
+if( write123) then
+   open(unit=123,file='atmos_ph1_lw_inc.1',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,row_length
+         do j=1,rows
+            do k=1,model_levels
+               WRITE(123,*) lw_incs(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(123)   
+endif    
       If (L_radiation) then
         if(mype==0 ) print *, "jhan:atmos_physics1:PRE Ni_rad_ctl"
 ! DEPENDS ON: ni_rad_ctl
@@ -2607,7 +2647,31 @@ sea_salt: IF (((l_use_seasalt_direct .OR. l_use_seasalt_indirect).AND.  &
       , cosp_gbx                                                        &
 ! error information
      &, Error_code  )
+if( write123) then
+   open(unit=123,file='atmos_ph1_lw_inc.2',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,row_length
+         do j=1,rows
+            do k=1,model_levels
+               WRITE(123,*) lw_incs(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(123)   
+endif    
 
+if(write122) then
+   open(unit=122,file='atmos_ph1_inc.4',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,model_levels
+         do j=1,rows
+            do k=1,row_length
+               WRITE(122,*) 'theta ',theta_inc(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)   
+endif    
 if(mype==0 ) print *, "jhan:atmos_physics1:POST Ni_rad_ctl"
 ! Check error condition
         IF (Error_code > 0) THEN
@@ -2819,7 +2883,18 @@ if(mype==0 ) print *, "jhan:atmos_physics1:POST Ni_rad_ctl"
 
       END IF! on error code equal to zero
 
-
+if(write122) then
+   open(unit=122,file='atmos_ph1_inc.5',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,model_levels
+         do j=1,rows
+            do k=1,row_length
+               WRITE(122,*) 'theta ',theta_inc(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)    
+endif
 !-----------------------------------------------------------------------
 ! Tracer Source and Boundary updating where applicable
 !-----------------------------------------------------------------------
@@ -3034,6 +3109,18 @@ if(mype==0 ) print *, "jhan:atmos_physics1:POST Ni_rad_ctl"
         End Do
       End Do
 !
+if(write122) then
+   open(unit=122,file='atmos_ph1_inc.6',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,model_levels
+         do j=1,rows
+            do k=1,row_length
+               WRITE(122,*) 'theta ',theta_inc(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)   
+endif    
 ! 2. Call the checking routine (needs to use temperature, not
 !    potential temperature)
 !
@@ -3072,6 +3159,18 @@ if(mype==0 ) print *, "jhan:atmos_physics1:POST Ni_rad_ctl"
           End Do
         End Do
       End Do
+if(write122) then
+   open(unit=122,file='atmos_ph1_thetaStar.1',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,model_levels
+         do j=1,rows
+            do k=1,row_length
+               WRITE(122,*) 'theta ',theta_star(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)    
+endif
 !
 #if defined(SCMA)
 
@@ -3180,8 +3279,9 @@ if(mype==0 ) print *, "jhan:atmos_physics1:POST Ni_rad_ctl"
         End Do
       End Do
 
+print *, "jhan:L_pc2=.TRUE."
       Else  ! L_pc2
-
+print *, "jhan:L_pc2=.FLSE."
       Do k = 1, model_levels
         Do j = 1, rows
           Do i = 1, row_length
@@ -3205,6 +3305,19 @@ if(mype==0 ) print *, "jhan:atmos_physics1:POST Ni_rad_ctl"
 
       End If  ! L_pc2
 
+if(write122) then
+   open(unit=122,file='atmos_ph1_thetaStar.2',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,model_levels
+         do j=1,rows
+            do k=1,row_length
+               WRITE(122,*) 'theta ',theta_star(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)    
+endif   
+!STOP "jhan:stoped in atmos_phys1"
 ! prognostic second cloud ice in use
       IF (L_mcr_qcf2) THEN
         qcf2_star(1:row_length, 1:rows, 1:wet_levels) =                      &

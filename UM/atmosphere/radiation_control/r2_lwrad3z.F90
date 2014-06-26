@@ -983,6 +983,15 @@
       INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
       INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
       REAL(KIND=jprb)               :: zhook_handle
+   logical :: write125= .false.
+   logical :: write126= .false.
+   logical :: write127= .false.
+   logical :: write128= .false.
+   logical :: write129= .false.
+   logical :: write130= .false.
+   logical :: write131= .false.
+   logical :: write132= .false.
+   logical :: write133= .false.
 !
 !
       IF (lhook) CALL dr_hook('R2_LWRAD3Z',zhook_in,zhook_handle)
@@ -1406,6 +1415,12 @@
           END WHERE
         END IF
 
+!if(write132) then
+!   open(unit=132,file='r2.132.fnet1',status="unknown", &
+!        action="write", form="formatted",position='append' )
+!           WRITE(132,*) flux_net
+!   close(132)
+!endif           
 !
 ! DEPENDS ON: radiance_calc
         call radiance_calc(ierr                                         &
@@ -1583,6 +1598,12 @@
           GO TO 9999
         end if
 !
+!if(write132) then
+!   open(unit=132,file='r2.132.fnet2',status="unknown", &
+!        action="write", form="formatted",position='append' )
+!           WRITE(132,*) flux_net
+!   close(132)
+!endif           
 !
       endif
 !
@@ -1632,9 +1653,16 @@
         END IF
 
 
+if(write132) then
+   open(unit=132,file='r2.132.fnet3',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=133,file='r2.133.fup1',status="unknown", &
+        action="write", form="formatted",position='append' )
 !       Convert downward fluxes to net fluxes.
         do i=0, n_layer
           do l=1, n_points
+            write(132,*) flux_net(l, i, 1)
+            write(133,*) flux_up(l, i, 1)
             flux_net(l, i, 1)=flux_net(l, i, 1)-flux_up(l, i, 1)
           enddo
         enddo
@@ -1646,6 +1674,9 @@
             enddo
           enddo
         endif
+   close(132)
+   close(133)
+endif
 !
 !
 !       OLR:
@@ -2196,20 +2227,28 @@
 !
 !       Output arrays:
 !
+if(write125) then
+   open(unit=125,file='r2.125.lw1',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=126,file='r2.126.lw1',status="unknown", &
+        action="write", form="formatted",position='append' )
 !       Convert the fluxes to increments in the heating rate except at
 !       the surface: there, the net downward flux is assigned to LWOUT.
         do k=nlevs, 1, -1
           if (l_scale_inc) then
+            
             do l=1, n_points
               lwout(list(l), k+1)=(flux_net(l, n_layer-k, 1)            &
      &          -flux_net(l, n_layer+1-k, 1))                           &
      &          *pts/layer_heat_capacity(l, n_layer+1-k)
+           WRITE(125,*) lwout(list(l), k)
             enddo
           else
             do l=1, n_points
               lwout(list(l), k+1)=(flux_net(l, n_layer-k, 1)            &
      &          -flux_net(l, n_layer+1-k, 1))                           &
      &          /layer_heat_capacity(l, n_layer+1-k)
+           WRITE(126,*) lwout(list(l), k)
             enddo
           endif
           if (LW_diag%l_clear_hr) then
@@ -2223,6 +2262,9 @@
             enddo
           endif
         enddo
+   close(125)
+   close(126)
+endif
 !
         if (lw_control%l_extra_top) then
 !         calculate the radiation absorbed in the extra layer
@@ -2233,9 +2275,23 @@
           enddo
         endif
 !
+if(write130) then
+   !open(unit=125,file='r2.125.lw2',status="unknown", &
+   !     action="write", form="formatted",position='append' )
+   open(unit=131,file='r2.131.ij',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=130,file='r2.130.fnet',status="unknown", &
+        action="write", form="formatted",position='append' )
         do l=1, n_points
           lwout(list(l), 1)=flux_net(l, n_layer, 1)
+           !WRITE(125,*) lwout(list(l), 1)
+          WRITE(131,*) l, n_layer
+          WRITE(130,*)flux_net(l, n_layer, 1)
         enddo
+   !close(125)
+   close(130)
+   close(131)
+endif
 !
 !       Separate the contributions over open sea and sea-ice.
 !       Fluxes returned from the radiation code itself are not
@@ -2243,6 +2299,17 @@
 !       to grid-box mean values. This split is possible only if the
 !       ocean surface has been tiled.
 !
+if(write125) then
+   open(unit=125,file='r2.125.lw3',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=126,file='r2.126.lw3',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=127,file='r2.127.lw3',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=128,file='r2.flandg',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=129,file='r2.lwsea',status="unknown", &
+        action="write", form="formatted",position='append' )
         if (l_rad_tile) then
 !
 !         The variable flandg is set even if coastal tiling is not
@@ -2260,6 +2327,7 @@
 !             This point is open sea with no sea ice.
               lwsea(l)=lwout(l, 1)
               lwout(l, 1)=0.0
+           WRITE(125,*) lwout(l, 1)
             endif
           enddo
 !
@@ -2273,6 +2341,7 @@
      &        +flux_up(ll, n_layer, 1)                                  &
      &        -flux_up_tile(lll, index_tile(ip_ocean_tile), 1))
             lwout(l, 1)=lwout(l, 1)-(1.0-flandg(l))*lwsea(l)
+           WRITE(126,*) lwout(l, 1)
           enddo
 !
 !         The remaining points are entirely land points and lwout
@@ -2288,6 +2357,9 @@
             lwout(list(1:n_points), 1)=lwout(list(1:n_points), 1)       &
      &        -(1.0-flandg(list(1:n_points)))*lwsea(list(1:n_points))
           Endwhere
+          WRITE(127,*) lwout(list(1:n_points), 1)
+          WRITE(128,*) flandg(list(1:n_points))
+          WRITE(129,*) lwsea(list(1:n_points))
 !
         endif
 !
@@ -2304,6 +2376,12 @@
           enddo
         endif
 !
+   close(125)
+   close(126)
+   close(127)
+   close(128)
+   close(129)
+endif
       endif
 !
 !

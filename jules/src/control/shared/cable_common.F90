@@ -37,7 +37,7 @@ MODULE cable_common_module
    !---total number of timesteps, and processing node 
    INTEGER, SAVE :: ktau_gl, kend_gl, knode_gl, kwidth_gl
    
-   logical :: L_fudge = .FALSE. 
+   logical :: L_fudge = .true. 
    !---CABLE runtime switches def in this type
    TYPE kbl_internal_switches
       LOGICAL :: um = .FALSE., um_explicit = .FALSE., um_implicit = .FALSE.,   &
@@ -443,6 +443,7 @@ SUBROUTINE fudge_out_i2D( i,j, var, varname )
    ! content changes with interface
    write (6, ft) varname,i, var(i,j)
    var = var(i,j) 
+   var = 0 
 End SUBROUTINE fudge_out_i2D 
 
 
@@ -459,6 +460,7 @@ SUBROUTINE fudge_out_r1D( i, var, varname )
    ! content changes with interface
    write (6, ft) varname,i, var(i)
    var = var(i) 
+   var = 0. 
 End SUBROUTINE fudge_out_r1D 
 
 SUBROUTINE fudge_out_r2D( i,j, var, varname )
@@ -474,6 +476,7 @@ SUBROUTINE fudge_out_r2D( i,j, var, varname )
    ! content changes with interface
    write (6, ft) varname,i,j, var(i,j)
    var = var(i,j) 
+   var = 0. 
 End SUBROUTINE fudge_out_r2D 
 
 SUBROUTINE fudge_out_r3D( i,j,k, var, varname )
@@ -489,6 +492,7 @@ SUBROUTINE fudge_out_r3D( i,j,k, var, varname )
    ! content changes with interface
    write (6, ft) varname,i,j,k, var(i,j,k)
    var = var(i,j,k) 
+   var = 0. 
 End SUBROUTINE fudge_out_r3D 
 
 

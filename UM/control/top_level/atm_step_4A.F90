@@ -683,6 +683,8 @@ TYPE (array_dims) twoddims_no_halo
 
 LOGICAL, SAVE :: subseq_to_dump = .FALSE.
 
+LOgical :: write122=.falsE.
+LOgical :: write123=.false.
 !- End of header
 
 
@@ -2206,6 +2208,18 @@ CALL atm_step_phys_init(                                                &
      cf_star, cfl_star, cff_star, rho_km, ch, exner_lbc_real_tend,      &
      w_lbc_real_tend, errorstatus, 'microphy')
 
+if(write122) then
+   open(unit=122,file='atm_step.1',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,tdims_s%i_end
+         do j=1,tdims_s%j_end
+            do k=1,tdims_s%k_end
+               WRITE(122,*) 'theta ',theta_star(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)    
+endif
 IF (l_physics .AND. errorstatus == 0) THEN
 
 ! DEPENDS ON: Atm_Step_diag
@@ -2283,6 +2297,19 @@ IF (l_physics .AND. errorstatus == 0) THEN
          cosp_csnow_3d = 0.0
       END IF
     END IF
+
+if(write122) then
+   open(unit=122,file='atm_step.2',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,tdims_s%i_end
+         do j=1,tdims_s%j_end
+            do k=1,tdims_s%k_end
+               WRITE(122,*) 'theta ',theta_star(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)    
+endif
    if(mype==0 ) print *, "jhan:PRE cable_control"
    CALL cable_control( & 
                !in 8.2 vn: pre pass timestep_number{
@@ -2326,7 +2353,21 @@ IF (l_physics .AND. errorstatus == 0) THEN
 !            !canopy_gb , land_albedo 
             canopy_water, land_alb )
    if(mype==0 ) print *, "jhan:POST cable_control"
-
+!jhan:hack
+   print *, "jhan:atm_step:shape(lw_incs) ", shape(lw_incs)
+!   lw_incs = 0.01
+if(write123) then
+   open(unit=123,file='atm_step_lw_incs.1 ',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,row_length
+         do j=1,rows
+            do k=1,model_levels
+               WRITE(123,*) lw_incs(i,j,k)
+            enddo
+         enddo
+      enddo
+      close(123)
+endif
 
 ! DEPENDS ON: atmos_physics1
         Call Atmos_Physics1(                                             &
@@ -2410,6 +2451,19 @@ IF (l_physics .AND. errorstatus == 0) THEN
      &,     ErrorStatus  )
 
 
+if(write122) then
+   open(unit=122,file='atm_step.3',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do i=1,tdims_s%i_end
+         do j=1,tdims_s%j_end
+            do k=1,tdims_s%k_end
+               WRITE(122,*) 'theta ',theta_star(i,j,k)
+            enddo
+         enddo
+      enddo
+   close(122)    
+endif
+
   ! temporarily store r_u etc in the _p2 arrays. 
   ! the _p2 arrays are not used at this point in the code, only
   ! subsequently to eg_f1sp, at which point the stored value is no
@@ -2434,6 +2488,7 @@ IF (l_physics .AND. errorstatus == 0) THEN
              L_mcr_qgraup,                                               &
              L_mcr_qrain,                                                &
              L_mcr_qcf2)
+
 
 
   IF (l_mr_physics1) THEN
@@ -2587,6 +2642,7 @@ IF (l_physics .AND. errorstatus == 0) THEN
 
 END IF ! L_Physics
 
+
 ! Deallocate the arrays of UKCA_RADAER
   DEALLOCATE(ukca_radaer%mix_ratio)
   DEALLOCATE(ukca_radaer%comp_vol)
@@ -2649,6 +2705,7 @@ IF (INTEGRITY_TEST)                                                   &
 CALL eg_r( theta_star, m_star,mcl_star,mcf_star,mgraup_star, &
            mrain_star,mcf2_star, m_v, theta, couple_app )
 
+
 CALL eg_sisl_init(                                                    &
          row_length,rows,n_rows,model_levels, l_inc_solver,           &
          l_call_from_solver,.FALSE., ih,g_theta, u, v, w,             &
@@ -2699,6 +2756,7 @@ CALL atm_step_phys_reset(                                               &
 #include "arg_atm_fields.h"
     q_star, qcl_star, qcf_star, r_v, r_u, dolr, theta_star, gs1,        &
     cf_star, cfl_star, cff_star, 'cyclrset')
+
 
 
 !=== Polar filter + diffusion of increments section ==================================
@@ -3353,11 +3411,23 @@ lphysics :  IF (l_physics) THEN
              q_star, qcl_star, qcf_star,  theta_star, &
              cf_star, cfl_star, cff_star, 4)
 
+IF (lhook) CALL dr_hook('GLUE_CONV_5A',zhook_in,zhook_handle)
+
+
 
 ! NB if you are changing the argument list to atmos_physics2, please
 ! do an equivalent change in routine scm_main to keep the single column
 ! model consistent. Note there are two calls to atmos_physics2 in scm_main.
-
+!do i=1,tdims_s%i_end
+!!write(6,'("jhan:atm_step:theta_star "), i5.2') i 
+! print *,"jhan:atm_step:theta_star ", i 
+! do j=1,tdims_s%j_end
+!  do k=1,tdims_s%k_end
+!   print *,"jhan:theta_star ", theta_star(i,j,k)
+!   !write(6,'("jhan:theta_star "), F15.2') theta_star(i,j,k)
+!  enddo
+! enddo
+!enddo
 ! DEPENDS ON: atmos_physics2
           Call atmos_physics2(                                           &
 ! Parallel variables
