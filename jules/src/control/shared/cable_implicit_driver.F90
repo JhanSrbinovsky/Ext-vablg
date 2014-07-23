@@ -204,12 +204,9 @@ subroutine cable_implicit_driver( LS_RAIN, CON_RAIN, LS_SNOW, CONV_SNOW,       &
       !--- where mask tells um2cable_rr whether or not to use default value 
       !--- for snow tile 
       !-------------------------------------------------------------------
+print *, "jhan:cable_im 1"
       CALL um2cable_rr( (LS_RAIN+CON_RAIN)*um1%TIMESTEP, met%precip)
       CALL um2cable_rr( (LS_SNOW+CONV_SNOW)*um1%TIMESTEP, met%precip_sn)
-print *, "jhan:_impl:sh(dtl_1)", shape(dtl_1)
-print *, "jhan:_impl:sh(dqw_1)", shape(dqw_1)
-print *, "jhan:_impl:sh(dtlc)", shape(dtlc)
-print *, "jhan:_impl:sh(dqwc)", shape(dqwc)
       CALL um2cable_rr( dtl_1, dtlc)
       CALL um2cable_rr( dqw_1, dqwc)
       
@@ -224,11 +221,13 @@ print *, "jhan:_impl:sh(dqwc)", shape(dqwc)
       met%tvrad = met%tk
  
       canopy%cansto = canopy%oldcansto
+print *, "jhan:cable_im 2"
 
       CALL cbm(real(TIMESTEP), air, bgc, canopy, met, bal,  &
            rad, rough, soil, ssnow, sum_flux, veg)
   
         
+print *, "jhan:cable_im 3"
       CALL implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
                             SMVCST, STHF, STHF_TILE, STHU, STHU_TILE,          &
                             snow_tile, SNOW_RHO1L ,ISNOW_FLG3L, SNOW_DEPTH3L,  &
@@ -241,9 +240,11 @@ print *, "jhan:_impl:sh(dqwc)", shape(dqwc)
                             DIM_CS2, NPP, NPP_FT, GPP, GPP_FT, RESP_S,         &
                             RESP_S_TOT, RESP_S_TILE, RESP_P, RESP_P_FT, G_LEAF )
        
+print *, "jhan:cable_im 4"
 ! DEPENDS ON: cable_hyd_driver
       call cable_hyd_driver( SNOW_TILE, LYING_SNOW, SURF_ROFF, SUB_SURF_ROFF,  &
                              TOT_TFALL )
+print *, "jhan:cable_im 5"
 
 
       cable_runtime%um_implicit = .FALSE.
@@ -337,18 +338,22 @@ SUBROUTINE implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
       GPP_TILE,   & ! Local
       SURF_HTF_T_CAB, &
       GLEAF_TILE, & ! Local, kdcorbin, 10/10
-      FRP_TILE,   &
+      FRP_TILE
+
+   REAL, dimension(um1%land_pts,um1%ntiles) ::                           &
       NPP_FT,     &
       NPP_FT_old, &
       GPP_FT,     &
-      GPP_FT_old       
+      GPP_FT_old
 
    REAL, dimension(um1%land_pts) ::                                            &
-      SNOW_GRD,   &  
-      CANOPY_GB,  &
       RESP_P,     & 
       NPP,        & 
       GPP
+
+   REAL, dimension(um1%land_pts) ::                                            &
+      SNOW_GRD,   &  
+      CANOPY_GB
    
    REAL, DIMENSION(um1%land_pts,um1%ntiles) ::                                 &
       SNOW_TILE,     & !
@@ -385,7 +390,18 @@ SUBROUTINE implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
    
    REAL, POINTER :: TFRZ
    
+   LOGICAL, SAVE :: first_call = .TRUE.
+print *, "jhan:cable_imUN 1"
    
+   if( first_call ) then
+      NPP_FT = 0.
+      NPP_FT_old = 0.
+      GPP_FT = 0.
+      GPP_FT_old = 0.       
+      RESP_P =0.
+      NPP =0.
+      first_call = .false.
+   endif    
       TFRZ => PHYS%TFRZ
   
       !--- set UM vars to zero
@@ -446,6 +462,7 @@ SUBROUTINE implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
       where ( fe_dlh .lt. 0.0 ) fe_dlh = MIN ( -1.e-6, fe_dlh )
       fes_dlh = canopy%fes/(air%rlam*ssnow%cls)
       fev_dlh = canopy%fev/air%rlam
+print *, "jhan:cable_imUN 2"
 
       !---update fluxes 
       FQW_TILE = UNPACK(fe_dlh, um1%l_tile_pts, miss)
@@ -476,6 +493,7 @@ SUBROUTINE implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
      NPP_TILE       = UNPACK(canopy%fnpp, um1%L_TILE_PTS, miss)
      GLEAF_TILE     = UNPACK(canopy%frday,um1%L_TILE_PTS, miss)
 
+print *, "jhan:cable_imUN 3"
       IF( cable_user%leaf_respiration == 'on' .OR.                             &
            cable_user%leaf_respiration == 'ON') THEN
          GPP_TILE = UNPACK(canopy%fnpp+canopy%frp, um1%L_TILE_PTS, miss)
@@ -490,6 +508,7 @@ SUBROUTINE implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
      RESP_P_FT_old  = RESP_P_FT
      RESP_S_old     = RESP_S
 
+print *, "jhan:cable_imUN 4 " 
      !initialse full land grids and retain coastal grid fluxes
       DO N=1,um1%NTILES
          DO K=1,um1%TILE_PTS(N)
@@ -500,16 +519,25 @@ SUBROUTINE implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
              FTL_1(I,J) =  0.0
              FQW_1(I,J) =  0.0
            ELSE
+!print *, "jhan:cable_imUN 4.1 ftl_1 ", ftl_1(i,j)
+!print *, ""
+!print *, "jhan:cable_imUN 4.1 fw_1 ", fqw_1(i,j)
              !retain sea/ice contribution and remove land contribution
              FTL_1(I,J) = FTL_1(I,J) - FLAND(L) * um1%TILE_FRAC(L,N) *         &
                           FTL_TILE_old(L,N)
              FQW_1(I,J) = FQW_1(I,J) - FLAND(L) * um1%TILE_FRAC(L,N) *         &
                           FQW_TILE_old(L,N)
+!print *, "jhan:cable_imUN 4.1 flannd ", fland(l)
+!print *, "jhan:cable_imUN 4.1 frac", um1%tile_frac(l,n)
+!print *, "jhan:cable_imUN 4.1 ftl_tile_old ", ftl_tile_old(l,n)
+!print *, ""
+!print *, "jhan:cable_imUN 4.1 fw_tile_old ", fqw_tile_old(i,j)
            ENDIF
            SURF_HT_FLUX_LAND(I,J) = 0.
          ENDDO
      ENDDO
 
+print *, "jhan:cable_imUN 4.1"
       DO N=1,um1%NTILES
          DO K=1,um1%TILE_PTS(N)
            L = um1%TILE_INDEX(K,N)
@@ -523,28 +551,43 @@ SUBROUTINE implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
          ENDDO
       ENDDO
 
+print *, "jhan:cable_imUN 4.2"
+print *, "jhan:cable_imUN 4.2.tiles ", um1%NTILES
       DO N=1,um1%NTILES
+print *, "jhan:cable_imUN 4.2.tile pts ", um1%TILE_ptS(n)
          DO K=1,um1%TILE_PTS(N)
             L = um1%TILE_INDEX(K,N)
+print *, "jhan:cable_imUN 4.2.tile index ", um1%TILE_index(k,n)
             IF( FLAND(L) == 1.0) THEN
+print *, "jhan:cable_imUN 4.2.T n,k,l", n,k,l
                NPP(L)=0.; NPP_FT(L,N)=0.; GPP(L)=0.; GPP_FT(L,N)=0.
                RESP_P(L)=0.; RESP_P_FT(L,N)=0.; RESP_S(L,:)=0.; G_LEAF(L,N)=0.   
             ELSE
+print *, "jhan:cable_imUN 4.2.F n,k,l", n,k,l
                ! For coastal points: currently no contribution
                NPP(L)=NPP(L)-FLAND(L)*um1%TILE_FRAC(L,N)*NPP_FT_old(L,N)
                GPP(L)=GPP(L)-FLAND(L)*um1%TILE_FRAC(L,N)*GPP_FT_old(L,N)
                RESP_P(L)=RESP_P(L)-FLAND(L)*um1%TILE_FRAC(L,N)*RESP_P_FT_old(L,N)
+print *, "jhan:im:F:1 ", NPP(L), FLAND(L),um1%TILE_FRAC(L,N),NPP_FT_old(L,N)
+
+print *, "jhan:im:F:2 ", GPP(L), FLAND(L),um1%TILE_FRAC(L,N),GPP_FT_old(L,N)
+print *, "jhan:im:F:3 ", RESP_P(L), FLAND(L),um1%TILE_FRAC(L,N),RESP_P_FT_old(L,N)
                !--- loop for soil respiration
                DO I=1,DIM_CS1
                   RESP_S(L,I)=RESP_S(L,I)-FLAND(L)*RESP_S_old(L,I)
+print *, "jhan:im:F:4 I ",i, RESP_S(L,I)
                ENDDO
                RESP_S_TOT(L)=sum(RESP_S(L,:))
+print *, "jhan:im:F:5 ", RESP_S_TOT(L)
             ENDIF
          ENDDO
       ENDDO
 
+print *, "jhan:cable_imUN 4.2 end "
+print *, "jhan:cable_imUN 4.2 frs ", frs_tile
      RESP_S_TILE=FRS_TILE*1.e-3
 
+print *, "jhan:cable_imUN 5"
       DO N=1,um1%NTILES 
          DO K=1,um1%TILE_PTS(N)
             L = um1%TILE_INDEX(K,N)
@@ -567,64 +610,60 @@ SUBROUTINE implicit_unpack( TSOIL, TSOIL_TILE, SMCL, SMCL_TILE,                &
          ENDDO
       ENDDO
 
+print *, "jhan:cable_imUN 6"
       if(L_fudge) then
-         call fudge_out( 1,1,1, tsoil_tile, 'tsoil_tile')
-         call fudge_out( 1,1,1, smcl_tile, 'smcl_tile')
-         call fudge_out( 1,1, tsoil, 'tsoil')
-         call fudge_out( 1,1,1, sthf_tile, 'sthf_tile')
-         call fudge_out( 1,1,1, sthu_tile, 'sthu_tile')
-         call fudge_out( 1,1, sthf, 'sthf')
-         call fudge_out( 1,1, sthu, 'sthu')
-         call fudge_out( 1,1,1, tsoil_tile, 'tsoil_tile')
-         call fudge_out( 1,1,1, smcl_tile, 'smcl_tile')
-         call fudge_out( 1,1, tsoil, 'tsoil')
-         call fudge_out( 1,1,1, sthf_tile, 'sthf_tile')
-         call fudge_out( 1,1,1, sthu_tile, 'sthu_tile')
-         call fudge_out( 1,1, sthf, 'sthf')
-         call fudge_out( 1,1, sthu, 'sthu')
-         call fudge_out( 1,1, snow_rho1l, 'snow_rho1l')
-         call fudge_out( 1,1, ISNOW_FLG3L, 'ISNOW_FLG3L')
-         call fudge_out( 1,1, MELT_TILE, 'MELT_TILE')
-         call fudge_out( 1,1, snow_TILE, 'snow_TILE')
-         call fudge_out( 1, snow_grd, 'snow_grd')
-         call fudge_out( 1,1,1, snow_Tmp3L, 'snow_Tmp3L')
-         call fudge_out( 1,1,1, snow_mass3L, 'snow_mass3L')
-         call fudge_out( 1,1,1, snow_rho3L, 'snow_rho3L')
-         call fudge_out( 1,1,1, snow_depth3L, 'snow_depth3L')
-         call fudge_out( 1,1,1, snow_cond, 'snow_cond')
-         call fudge_out( 1,1, GS_TILE, 'GS_TILE')
-         call fudge_out( 1, GS, 'GS')
-         call fudge_out( 1,1, FTL_TILE, 'FTL_TILE')
-         call fudge_out( 1,1, Fqw_TILE, 'Fqw_TILE')
-         call fudge_out( 1,1, tstar_TILE, 'tstar_TILE')
-         call fudge_out( 1,1, radnet_TILE, 'radnet_TILE')
-         call fudge_out( 1,1, TOT_ALB, 'TOT_ALB')
-         call fudge_out( 1,1, ESOIL_TILE, 'ESOIL_TILE')
-         call fudge_out( 1,1, ECAN_TILE, 'ECAN_TILE')
-         call fudge_out( 1,1, snage_TILE, 'snage_TILE')
-         call fudge_out( 1,1, t1p5m_TILE, 't1p5m_TILE')
-         call fudge_out( 1,1, q1p5m_TILE, 'q1p5m_TILE')
-         call fudge_out( 1,1, canopy_TILE, 'canopy_TILE')
-         call fudge_out( 1, canopy_GB, 'canopy_GB')
-         call fudge_out( 1,1,frs_TILE, 'frs_TILE')
-         call fudge_out( 1,1, NEE_TILE, 'NEE_TILE')
-         call fudge_out( 1,1, NPP_TILE, 'NPP_TILE')
-         call fudge_out( 1,1, Gleaf_TILE, 'Gleaf_TILE')
-         call fudge_out( 1,1, GPP_TILE, 'GPP_TILE')
-         call fudge_out( 1,1,frp_TILE, 'frp_TILE')
-         call fudge_out( 1,1,fTL_1, 'fTL_1')
-         call fudge_out( 1,1,fqw_1, 'fqw_1')
-         call fudge_out( 1,1,SURF_HT_FLUX_LAND, 'SURF_HT_FLUX_LAND')
-         call fudge_out( 1,1,RESP_S_TILE, 'RESP_S_TILE')
-         call fudge_out( 1,1,g_leaf, 'g_leaf')
-         call fudge_out( 1,1, NPP_ft, 'NPP_ft')
-         call fudge_out( 1,1, GPP_ft, 'GPP_ft')
-         call fudge_out( 1,1,RESP_S, 'RESP_S')
-         call fudge_out( 1,RESP_S_tot, 'RESP_S_tot')
-         call fudge_out( 1,1,RESP_P_FT, 'RESP_p_FT')
-         call fudge_out( 1,RESP_p, 'RESP_p')
+         call fudge_out( 1,1,1,  tsoil_tile,    'tsoil_tile',  .TRUE., 278. )
+         call fudge_out( 1,1,1,  smcl_tile,     'smcl_tile',   .TRUE., 0. )
+         call fudge_out( 1,1,    tsoil,         'tsoil',       .TRUE., 278. )
+         call fudge_out( 1,1,1,  sthf_tile,     'sthf_tile',   .TRUE., 0. )
+         call fudge_out( 1,1,1,  sthu_tile,     'sthu_tile',   .TRUE., 0. )
+         call fudge_out( 1,1,    sthf,          'sthf',        .TRUE., 0. )
+         call fudge_out( 1,1,    sthu,          'sthu',        .TRUE., 0. )
+         call fudge_out( 1,1,    snow_rho1l,    'snow_rho1l',  .TRUE., 0. )
+         call fudge_out( 1,1,    ISNOW_FLG3L,   'ISNOW_FLG3L', .TRUE., 0 )     
+         call fudge_out( 1,1,    MELT_TILE,     'MELT_TILE',   .TRUE., 0. )   
+         call fudge_out( 1,1,    snow_TILE,     'snow_TILE',   .TRUE., 0. )   
+         call fudge_out( 1,      snow_grd,      'snow_grd',    .TRUE., 0. )   
+         call fudge_out( 1,1,1,  snow_Tmp3L,    'snow_Tmp3L',  .TRUE., 0. )      
+         call fudge_out( 1,1,1,  snow_mass3L,   'snow_mass3L', .TRUE., 0. )      
+         call fudge_out( 1,1,1,  snow_rho3L,    'snow_rho3L',  .TRUE., 0. )      
+         call fudge_out( 1,1,1,  snow_depth3L,  'snow_depth3L',.TRUE., 0. )         
+         call fudge_out( 1,1,1,  snow_cond,     'snow_cond',   .TRUE., 0. )         
+         call fudge_out( 1,1,    GS_TILE,       'GS_TILE',     .TRUE., 0. )      
+         call fudge_out( 1,      GS,            'GS',          .TRUE., 0. )            
+         call fudge_out( 1,1,    FTL_TILE,      'FTL_TILE',    .TRUE., 0. )                        
+         call fudge_out( 1,1,    Fqw_TILE,      'Fqw_TILE',    .TRUE., 0. )                                 
+         call fudge_out( 1,1,    tstar_TILE,    'tstar_TILE',  .TRUE., 280. )                              
+         call fudge_out( 1,1,    radnet_TILE,   'radnet_TILE', .TRUE., 0. )                                    
+         call fudge_out( 1,1,    TOT_ALB,       'TOT_ALB',     .TRUE., 0. )                                 
+         call fudge_out( 1,1,    ESOIL_TILE,    'ESOIL_TILE',  .TRUE., 0. )                                 
+         call fudge_out( 1,1,    ECAN_TILE,     'ECAN_TILE',   .TRUE., 0. )                                    
+         call fudge_out( 1,1,    snage_TILE,    'snage_TILE',  .TRUE., 0. )                                 
+         call fudge_out( 1,1,    t1p5m_TILE,    't1p5m_TILE',  .TRUE., 0. )                           
+         call fudge_out( 1,1,    q1p5m_TILE,    'q1p5m_TILE',  .TRUE., 0. )                                       
+         call fudge_out( 1,1,    canopy_TILE,   'canopy_TILE', .TRUE., 0. )               
+         call fudge_out( 1,      canopy_GB,     'canopy_GB',   .TRUE., 0. )                           
+         call fudge_out( 1,1,    frs_TILE,      'frs_TILE',    .TRUE., 0. )                                 
+         call fudge_out( 1,1,    NEE_TILE,      'NEE_TILE',    .TRUE., 0. )                                 
+         call fudge_out( 1,1,    NPP_TILE,      'NPP_TILE',    .TRUE., 0. )                                          
+         call fudge_out( 1,1,    Gleaf_TILE,    'Gleaf_TILE',  .TRUE., 0. )                                          
+         call fudge_out( 1,1,    GPP_TILE,      'GPP_TILE',    .TRUE., 0. )                                    
+         call fudge_out( 1,1,    frp_TILE,      'frp_TILE',    .TRUE., 0. )                                                
+         call fudge_out( 1,1,    fTL_1,         'fTL_1',       .TRUE., 0. )                                                
+         call fudge_out( 1,1,    fqw_1,         'fqw_1',       .TRUE., 0. )                                                
+         call fudge_out( 1,1,SURF_HT_FLUX_LAND, 'SURF_HT_FLUX_LAND',  .TRUE., 0. )                                         
+         call fudge_out( 1,1,    RESP_S_TILE,   'RESP_S_TILE', .TRUE., 0. )
+         call fudge_out( 1,1,    g_leaf,        'g_leaf',      .TRUE., 0. )
+         call fudge_out( 1,1,    NPP_ft,        'NPP_ft',      .TRUE., 0. )
+         call fudge_out( 1,1,    GPP_ft,        'GPP_ft',      .TRUE., 0. )
+         call fudge_out( 1,1,    RESP_S,        'RESP_S',      .TRUE., 0. )                        
+         call fudge_out( 1,      RESP_S_tot,    'RESP_S_tot',  .TRUE., 0. )                              
+         call fudge_out( 1,1,    RESP_P_FT,     'RESP_p_FT',   .TRUE., 0. )                              
+         call fudge_out( 1,      RESP_p,        'RESP_p',      .TRUE., 0. )                                       
       endif
 
+print *, "jhan:cable_imUN 7"
+   write( 6,'("End of cable_implicit_UNPACK")' )
 END SUBROUTINE Implicit_unpack
 
 

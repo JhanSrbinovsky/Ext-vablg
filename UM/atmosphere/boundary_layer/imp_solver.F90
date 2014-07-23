@@ -934,12 +934,24 @@ SUBROUTINE imp_solver (                                                 &
   INTEGER(KIND=jpim), PARAMETER :: zhook_in  = 0
   INTEGER(KIND=jpim), PARAMETER :: zhook_out = 1
   REAL(KIND=jprb)               :: zhook_handle
-
+!jhan
+logical, parameter :: write125=.false.
+logical, parameter :: write130=.true.
+integer ::  jhi, jhistart, jhiend
+integer ::  jhj, jhjstart, jhjend
+integer ::  jhk, jhkstart, jhkend
   IF (lhook) CALL dr_hook('IMP_SOLVER',zhook_in,zhook_handle)
 
+jhkstart = 1 
+jhkend = bl_levels-1
+jhjstart = udims%j_start 
+jhjend =  udims%j_end
+jhistart = udims%i_start 
+jhiend =  udims%i_end
 ! Use standard BL solver
   IF ( .NOT. l_us_blsol ) THEN
 
+print *, "jhan:imp_solver: 1"
 ! DEPENDS ON: bdy_impl1
     CALL bdy_impl1 (                                                    &
      halo_i,halo_j,offx ,offy ,row_length,rows,n_rows,bl_levels,        &
@@ -956,6 +968,7 @@ SUBROUTINE imp_solver (                                                 &
      ltimer                                                             &
       )
 
+print *, "jhan:imp_solver: 2"
 ! NOTE ON SEA ICE
 ! The new schemes added to JULES at UM8.2 have not been copied into
 ! sf_impl.  So if using sf_impl, it is assumed that nice=nice_use=1
@@ -1104,6 +1117,20 @@ SUBROUTINE imp_solver (                                                 &
 
     l_correct = .FALSE.
 
+!jhan: taux and du are NaN     
+if(write130) then
+   open(unit=125,file='taux1',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=128,file='du1',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend;do jhk=jhkstart,jhkend
+         WRITE(125,*) ,taux(jhi,jhj,jhk +1)
+         WRITE(128,*) ,du(jhi,jhj,jhk +1)
+      enddo; enddo; enddo
+      WRITE(125,*) "" 
+   close(125)
+   close(128)
+endif  
 ! DEPENDS ON: BDY_IMPL3
     CALL bdy_impl3 (                                                    &
 ! IN levels/switches
@@ -1121,8 +1148,23 @@ SUBROUTINE imp_solver (                                                 &
      dqw_nt,dtl_nt,qw,tl,dqw1,dtl1,ct_ctq,ctctq1,dqw,dtl,cq_cm_u,cq_cm_v&
       )
 
+!jhan: taux and du are NaN     
+if(write130) then
+   open(unit=125,file='taux2',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=128,file='du2',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend;do jhk=jhkstart,jhkend
+         WRITE(125,*) ,taux(jhi,jhj,jhk +1)
+         WRITE(128,*) ,du(jhi,jhj,jhk +1)
+      enddo; enddo; enddo
+      WRITE(125,*) "" 
+   close(125)
+   close(128)
+endif  
+print *, "jhan:imp_solver: 3"
 ! DEPENDS ON: SF_IMPL2_cable
-    CALL sf_impl2_cable (                                                     &
+    CALL sf_impl2_cable (                                               &
 ! IN values defining field dimensions and subset to be processed :
      land_pts,land_index,nice,nice_use,ntiles,tile_index,tile_pts,      &
      sm_levels,canhc_tile,canopy,flake,smc,tile_frac,wt_ext_tile,       &
@@ -1150,7 +1192,7 @@ SUBROUTINE imp_solver (                                                 &
      fqw,ftl,ftl_tile,olr,taux_land,taux_ssi,tauy_land,tauy_ssi,        &
      TScrnDcl_SSI,TScrnDcl_TILE,tStbTrans,                              &
 ! OUT Diagnostic not requiring STASH flags :
-     ecan,ei_tile,esoil_tile,sea_ice_htf,surf_ht_flux,                  &
+     !there are some Nans in everything up to here BUT from tis point on du=NaNecan,ei_tile,esoil_tile,sea_ice_htf,surf_ht_flux,                  &
      surf_ht_flux_land,surf_ht_flux_sice,surf_htf_tile,                 &
 ! OUT diagnostic requiring STASH flags :
      sice_mlt_htf,snomlt_surf_htf,latent_heat,                          &
@@ -1162,6 +1204,25 @@ SUBROUTINE imp_solver (                                                 &
      rhokh_mix,error                                                    &
      )
 
+!jhan: taux and du are NaN     
+if(write130) then
+   open(unit=125,file='taux3',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=128,file='du3',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend;do jhk=jhkstart,jhkend
+         WRITE(125,*) ,taux(jhi,jhj,jhk +1)
+         WRITE(128,*) ,du(jhi,jhj,jhk +1)
+      enddo; enddo; enddo
+      WRITE(125,*) "" 
+   close(125)
+   close(128)
+endif  
+print *, "jhan:imp_solver: 3B"
+! OUT Increments to U and V momentum fields and Tl qw
+!  (New dynamics only).
+
+!jhan lookat how du is set in bdy_lay4 below
 ! DEPENDS ON: BDY_IMPL4
     CALL bdy_impl4 (                                                    &
 ! IN levels, switches
@@ -1178,7 +1239,23 @@ SUBROUTINE imp_solver (                                                 &
 ! OUT data
      t_latest,q_latest,rhokh_mix                                        &
       )
-
+!there are some Nans in everything up to here BUT from tis point on du=NaN
+!above du gets multiplied by taux(,,1)=NaN
+!jhan: taux and du are NaN     
+if(write130) then
+   open(unit=125,file='taux4',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=128,file='du4',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend;do jhk=jhkstart,jhkend
+         WRITE(125,*) ,taux(jhi,jhj,jhk +1)
+         WRITE(128,*) ,du(jhi,jhj,jhk +1)
+      enddo; enddo; enddo
+      WRITE(125,*) "" 
+   close(125)
+   close(128)
+endif  
+print *, "jhan:imp_solver: 4"
 !----------------------------------------------------------------------
 ! Compute 2nd stage (final) solution (corrector).
 !----------------------------------------------------------------------
@@ -1203,6 +1280,21 @@ SUBROUTINE imp_solver (                                                 &
         gamma2(i,j) = i1 - e2
       END DO
     END DO
+!jhan: taux and du are NaN     
+if(write130) then
+   open(unit=125,file='taux1',status="unknown", &
+        action="write", form="formatted",position='append' )
+   open(unit=128,file='du1',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend;do jhk=jhkstart,jhkend
+         WRITE(125,*) ,taux(jhi,jhj,jhk +1)
+         WRITE(128,*) ,du(jhi,jhj,jhk +1)
+      enddo; enddo; enddo
+      WRITE(125,*) "" 
+   close(125)
+   close(128)
+endif  
+
 
     l_correct = .TRUE.
 ! DEPENDS ON: BDY_IMPL3
@@ -1220,7 +1312,31 @@ SUBROUTINE imp_solver (                                                 &
      fqw,ftl,taux,tauy,du,dv,                                           &
      dqw_nt,dtl_nt,qw,tl,dqw1,dtl1,ct_ctq,ctctq1,dqw,dtl,cq_cm_u,cq_cm_v&
       )
+!jhan: taux and du are NaN     
+if(write125) then
+   open(unit=125,file='taux1',status="unknown", &
+        action="write", form="formatted",position='append' )
+   !open(unit=126,file='rdz_u',status="unknown", &
+   !     action="write", form="formatted",position='append' )
+   !open(unit=127,file='u',status="unknown", &
+   !     action="write", form="formatted",position='append' )
+   open(unit=128,file='du1',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend;do jhk=jhkstart,jhkend
+         WRITE(125,*) ,taux(jhi,jhj,jhk +1)
+         !WRITE(126,*) ,rdz_u(jhi,jhj,jhk +1)
+         !WRITE(127,*) ,u(jhi,jhj,jhk +1)
+         WRITE(128,*) ,du(jhi,jhj,jhk +1)
+      enddo; enddo; enddo
+      WRITE(125,*) "" 
+   close(125)
+   !close(126)
+   !close(127)
+   close(128)
+ endif  
 
+
+print *, "jhan:imp_solver: 5"
 ! DEPENDS ON: SF_IMPL2_cable
     CALL sf_impl2_cable (                                                     &
 ! IN values defining field dimensions and subset to be processed :
@@ -1262,6 +1378,32 @@ SUBROUTINE imp_solver (                                                 &
      rhokh_mix,error                                                    &
      )
 
+!jhan: taux and du are NaN     
+if(write125) then
+   open(unit=125,file='taux2',status="unknown", &
+        action="write", form="formatted",position='append' )
+   !open(unit=126,file='rdz_u',status="unknown", &
+   !     action="write", form="formatted",position='append' )
+   !open(unit=127,file='u',status="unknown", &
+   !     action="write", form="formatted",position='append' )
+   open(unit=128,file='du2',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend;do jhk=jhkstart,jhkend
+         WRITE(125,*) ,taux(jhi,jhj,jhk +1)
+         !WRITE(126,*) ,rdz_u(jhi,jhj,jhk +1)
+         !WRITE(127,*) ,u(jhi,jhj,jhk +1)
+         WRITE(128,*) ,du(jhi,jhj,jhk +1)
+      enddo; enddo; enddo
+      WRITE(125,*) "" 
+   close(125)
+   !close(126)
+   !close(127)
+   close(128)
+ endif  
+
+
+print *, "jhan:imp_solver: 6"
+
 ! DEPENDS ON: BDY_IMPL4
     CALL bdy_impl4 (                                                    &
 ! IN levels, switches
@@ -1291,6 +1433,7 @@ SUBROUTINE imp_solver (                                                 &
     DEALLOCATE (taux_star)
     DEALLOCATE (tauy_star)
 
+print *, "jhan:imp_solver: 7"
   END IF ! IF L_us_blsol
 
     DO j = 1, rows
@@ -1328,6 +1471,7 @@ SUBROUTINE imp_solver (                                                 &
       END DO
     END DO
 
+print *, "jhan:imp_solver: 8"
   IF (sq1p5 .AND. lq_mix_bl) THEN
 !----------------------------------------------------------------------
 ! Convert 1.5m mixing ratio to specific humidity
@@ -1353,6 +1497,7 @@ SUBROUTINE imp_solver (                                                 &
     END DO
   END IF
 
+print *, "jhan:imp_solver: 9"
   IF (.NOT. l_sice_multilayers) THEN
 
 !-----------------------------------------------------------------------
@@ -1363,6 +1508,7 @@ SUBROUTINE imp_solver (                                                 &
 ! so put it here for now
 !-----------------------------------------------------------------------
 
+print *, "jhan:imp_solver: 10"
 ! DEPENDS ON: sice_htf
   CALL sice_htf(                                                        &
    row_length,rows,flandg,simlt,nice,nice_use,                          &
@@ -1373,6 +1519,7 @@ SUBROUTINE imp_solver (                                                 &
   
   ELSE
     sea_ice_htf(:,:,:) =0.0   ! for safety
+print *, "jhan:imp_solver: 11"
   ENDIF
 
 ! Convert sea and sea-ice fluxes to be fraction of grid-box
@@ -1441,6 +1588,7 @@ SUBROUTINE imp_solver (                                                 &
       END DO
     END DO
 
+print *, "jhan:imp_solver: 12"
     DO k = 1, bl_levels-1
       DO j = vdims%j_start, vdims%j_end
         DO i = vdims%i_start, vdims%i_end
@@ -1489,6 +1637,11 @@ SUBROUTINE imp_solver (                                                 &
     fields_to_swap(i_field) % rows        =  n_rows
     fields_to_swap(i_field) % vector      =  .TRUE.
 
+!print *, "jhan:imp_solver: 14", row_length, offx, offy
+!print *, "jhan:imp_solver: 14.a ", i_field
+!print *, "jhan:imp_solver: 14.b ",   dissip_u(:,:,:)
+!print *, "jhan:imp_solver: 14.c ",   dissip_v(:,:,:)
+
 ! DEPENDS ON: swap_bounds_mv
     CALL swap_bounds_mv(fields_to_swap, i_field, row_length,            &
                       offx ,          offy )
@@ -1502,6 +1655,7 @@ SUBROUTINE imp_solver (                                                 &
                         bl_levels,                                      &
                         model_domain,at_extremity,dissip_u_p)
 
+print *, "jhan:imp_solver: 15"
       CALL v_to_p(dissip_v,                                             &
                         vdims_s%i_start,vdims_s%i_end,                  & 
                         vdims_s%j_start,vdims_s%j_end,                  &
@@ -1511,6 +1665,7 @@ SUBROUTINE imp_solver (                                                 &
                         model_domain,at_extremity,dissip_v_p)        
 
 
+print *, "jhan:imp_solver: 16"
     IF(model_domain  ==  mt_global) THEN
 
 IF (.NOT. l_vatpoles) THEN
@@ -1622,6 +1777,7 @@ END IF ! vatpoles
         END DO
       END DO
     END DO
+print *, "jhan:imp_solver: 17"
 !-----------------------------------------------------------------------
 ! Redistribute heating within the boundary layer to account
 ! for lack of BL mixing of these increments
@@ -1657,6 +1813,7 @@ END IF ! vatpoles
 
   END IF
 
+print *, "jhan:imp_solver: 19"
   IF (lhook) CALL dr_hook('IMP_SOLVER',zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE imp_solver

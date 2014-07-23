@@ -3548,6 +3548,7 @@ if(mype==0 ) print *, "jhan:atmos_physics2:POST ni_bl_ctl"
 ! ----------------------------------------------------------------------
 ! Section CNV.1 Call Convection scheme.
 ! ----------------------------------------------------------------------
+if(mype==0 ) print *, "jhan:atmos_physics2:PRE convection scheme"
 
       IF &
 #if !defined(SCMA)
@@ -3729,7 +3730,8 @@ if(mype==0 ) print *, "jhan:atmos_physics2:POST ni_bl_ctl"
                                theta_inc, q_inc, qcl_inc, qcf_inc ,          &
                                cf_liquid_inc, cf_frozen_inc, bulk_cf_inc,    &
                                conv_rain, conv_snow)
-
+!jhna
+taux = 0.
 !-----------------------------------------------------------------------
 
 ! DEPENDS ON: ni_conv_ctl
@@ -4812,7 +4814,9 @@ ALLOCATE(f_ngstress_v(vdims%i_start:vdims%i_end,                    &
 !----------------------------------------------------------------------
 ! End of second communication section
 !----------------------------------------------------------------------
+if(mype==0 ) print *, "jhan:atmos_physics2:POST communication scheme"
 
+if(mype==0 ) print *, "jhan:atmos_physics2:33"
   IF (L_bl) THEN
 ! only call on 1st cycle or if not fast running
      IF ( cycleno == 1 .OR. .NOT. l_quick_ap2 ) THEN
@@ -4870,6 +4874,7 @@ DEALLOCATE(f_ngstress_v)
 ! Here they are reset using nice as all the categories are always used in 
 ! the implicit surface scheme.
 
+if(mype==0 ) print *, "jhan:atmos_physics2:34"
       sice_pts_ncat(:)=0
       sice_index_ncat(:,:)=0
       sice_frac_ncat(:,:)=0.0
@@ -5058,6 +5063,7 @@ DEALLOCATE(f_ngstress_v)
 ! DEPENDS ON: timer
       If (Ltimer) Call timer ('AP2 Boundary Layer',6)
 
+if(mype==0 ) print *, "jhan:atmos_physics2:35"
 ! ----------------------------------------------------------------------
 ! Section RESTORE: Copy _latest fields into _star locations
 ! Area cloud fraction has been done in NI_IMP_CTL
@@ -5142,6 +5148,7 @@ DEALLOCATE(f_ngstress_v)
 ! Section HYD.1 Compress fields to land points, then call hydrology.
 ! ----------------------------------------------------------------------
 
+if(mype==0 ) print *, "jhan:atmos_physics2:36"
 ! Call hydrology only at last cycle
       If ( CycleNo == NumCycles) Then
 ! DEPENDS ON: timer
@@ -5371,6 +5378,7 @@ DEALLOCATE(f_ngstress_v)
 !-------------------------------------------------------------------
 ! RIVER ROUTING
 
+if(mype==0 ) print *, "jhan:atmos_physics2:37"
 
       IF ( L_RIVERS ) THEN
 

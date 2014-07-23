@@ -885,12 +885,44 @@ SUBROUTINE cable_control5( alb_tile, land_albedo,         &
 
    Real, dimension(cable% mp% rows, cable% mp% row_length,4), target ::                 &
       land_albedo
+   
+   logical, save :: first_call = .true.
 
+logical, parameter :: write125=.true.
+
+integer :: jhistart, jhiend, jhjstart, jhjend, jhkstart, jhkend 
+integer :: jhi, jhj, jhk
+
+   if ( .NOT. first_call ) return 
+   first_call = .false.
 
    cable% um% alb_tile => alb_tile
    cable% um% land_albedo => land_albedo
    cable% um% TILE_PTS = TILE_PTS
    cable% um% TILE_INDEX = TILE_INDEX
+   print *, "jhan:data:shape() TI c5) ",shape( TILE_INDEX )
+   print *, "jhan:data:shape() %TI c5) ", shape( cable% um% TILE_INDEX )
+   print *, "jhan:data:shape() %LP c5) ",  cable% mp% land_pts 
+   print *, "jhan:data:shape() %NT c5) ",  cable% mp% ntiles 
+
+jhistart = 1
+jhiend = cable% mp% land_pts
+jhjstart = 1
+jhjend = cable% mp% ntiles
+
+if(write125) then
+   open(unit=125,file='control5B',status="unknown", &
+        action="write", form="formatted",position='append' )
+      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend!;do jhk=jhkstart,jhkend
+         !if( cable% um% TILE_INDEX(jhi,jhj) > 15000 .OR.  cable% um% TILE_INDEX(jhi,jhj) < 0.) & 
+         !WRITE(125,*) , jhi, jhj, cable% um% TILE_INDEX(jhi,jhj)
+         if( TILE_INDEX(jhi,jhj) > 15000 .OR. TILE_INDEX(jhi,jhj) < 0.) & 
+         WRITE(125,*) , jhi, jhj, TILE_INDEX(jhi,jhj)
+      enddo; enddo!; enddo
+   close(125)
+ endif 
+    
+!      print *, "control5 ", tile_index 
    !cable% forcing% ShortWave    = surf_down_sw
 
 END SUBROUTINE cable_control5 

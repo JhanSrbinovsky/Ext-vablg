@@ -727,28 +727,43 @@ REAL(KIND=jprb)               :: zhook_handle
 
 IF (lhook) CALL dr_hook('SF_IMPL2',zhook_in,zhook_handle)
 
+print *, "jhan:sf_impl2_cable 0 "
+print *, "jhan:sf_impl2_cable strange1 "
 !CABLE: satisfy intent(inout) nature
 radnet_tile=0.
+print *, "jhan:sf_impl2_cable strange2 "
+#if !defined(UM_JULES)
 ! temporary timestep variable needed because JULES and UM have different
 ! names and types for the variable
-#if !defined(UM_JULES)
 timestep = REAL(timestep_len)
 #endif
 
-error = 0
-
+!print *, "jhan:sf_impl2_cable strange2.9 ", error
+print *, "jhan:sf_impl2_cable strange3 "
+!error = 0
+print *, "jhan:sf_impl2_cable strange3.1 "
+print *, "jhan:sf_impl2_cable strange3.t_i ", t_i_length
+print *, "jhan:sf_impl2_cable strange3.t_i ", t_j_length
 array_one(:)=1.0
+print *, "jhan:sf_impl2_cable strange3.2 "
 array_one_e_six(:)=1.0e6
+print *, "jhan:sf_impl2_cable strange3.3 "
 
+print *, "jhan:sf_impl2_cable strange4 "
 ! Set up sea ice field depending on nice_use
 IF (nice_use > 1) THEN
   ! Use all categories fully in surface exchange
+print *, "jhan:sf_impl2_cable strange5 "
   ice_fract_cat_use(:,:,:) = ice_fract_ncat(:,:,:)
+print *, "jhan:sf_impl2_cable strange6 "
 ELSE  ! nice_use=1
+print *, "jhan:sf_impl2_cable strange7 "
   ice_fract_cat_use(:,:,1) = ice_fract(:,:)
+print *, "jhan:sf_impl2_cable strange8 "
 END IF
 
 
+print *, "jhan:sf_impl2_cable 1 "
 ! DEPENDS ON: im_sf_pt2
 CALL im_sf_pt2 (                                                  &
  land_pts,land_index,ntiles,tile_index,tile_pts                   &
@@ -767,6 +782,7 @@ CALL im_sf_pt2 (                                                  &
 ,l_correct,l_flux_bc                                              &
 )
 
+print *, "jhan:sf_impl2_cable 2 "
 
 !-----------------------------------------------------------------------
 
@@ -816,6 +832,7 @@ IF ( .NOT. l_correct ) THEN
       MELT_TILE(L,N) = 0.
     ENDDO
   ENDDO
+print *, "jhan:sf_impl2_cable 3 "
 call cable_control7(                      &
                      dtl1_1, &
                      dqw1_1, &
@@ -831,6 +848,7 @@ call cable_control7(                      &
                      MELT_TILE &
                   )
  
+print *, "jhan:sf_impl2_cable 4 "
 ! DEPENDS ON:cable_implicit_driver
   call cable_implicit_driver( cable% um% LS_RAIN, cable% um% CONV_RAIN, &
                   cable% um% LS_SNOW, cable% um% CONV_SNOW, cable% im% dtl_1,  &
@@ -865,6 +883,7 @@ call cable_control7(                      &
                   )
 !CABLE}
 
+print *, "jhan:sf_impl2_cable 5 "
 
 !-----------------------------------------------------------------------
 ! Land surface calculations
@@ -898,6 +917,7 @@ call cable_control7(                      &
   END DO
 
 
+print *, "jhan:sf_impl2_cable 6 "
 !-----------------------------------------------------------------------
 !! 7.  Surface evaporation components and updating of surface
 !!     temperature (P245, routine SF_EVAP).
@@ -941,6 +961,7 @@ call cable_control7(                      &
     )
   ENDIF
 
+print *, "jhan:sf_impl2_cable 7 "
 !-----------------------------------------------------------------------
 !!     Surface melting of sea-ice and snow on land tiles.
 !-----------------------------------------------------------------------
@@ -986,7 +1007,7 @@ call cable_control7(                      &
 !        )
 !    END IF
 
-!-----------------------------------------------------------------------
+print *, "jhan:sf_impl2_cable 8 "
 !  Increment snow by sublimation and melt
 !-----------------------------------------------------------------------
     DO k=1,tile_pts(n)
@@ -1014,6 +1035,7 @@ call cable_control7(                      &
    END DO
   END DO
 
+print *, "jhan:sf_impl2_cable 9 "
 !!CABLE{
 !!CABLE: taken out as vars unknown, howevermay not need
 !       IF(NICE  ==  1)THEN
@@ -1091,6 +1113,7 @@ call cable_control7(                      &
 !
 !!CABLE}
 
+print *, "jhan:sf_impl2_cable 20 "
   IF (     (l_flake_model   ) &
       .AND.(.NOT.l_aggregate) ) THEN
     DO j=tdims%j_start,tdims%j_end
@@ -1182,6 +1205,8 @@ call cable_control7(                      &
 !    END DO
 !  END IF
 
+print *, "jhan:sf_impl2_cable 29 "
+!-----------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
 ! Optional error check : test for negative surface temperature
@@ -1198,6 +1223,7 @@ call cable_control7(                      &
     END DO
   END IF
 
+print *, "jhan:sf_impl2_cable 21 "
 
 !-----------------------------------------------------------------------
 ! Sea and sea-ice surface calculations
@@ -1240,6 +1266,7 @@ call cable_control7(                      &
   sice_mlt_htf(:,:,:)=0.0
   sea_ice_htf(:,:,:)=0.0
 
+print *, "jhan:sf_impl2_cable 22 "
 !-----------------------------------------------------------------------
 ! Store old surface temperature for sea and sea-ice if using the
 ! decoupled diagnostic.
@@ -1291,6 +1318,7 @@ call cable_control7(                      &
     END DO
   END IF
 
+print *, "jhan:sf_impl2_cable 23 "
   IF (l_sice_new_code) THEN
 
     DO n=1, nice_use
@@ -1317,6 +1345,7 @@ call cable_control7(                      &
 
   ELSE ! Use old code
 
+print *, "jhan:sf_impl2_cable 24 "
     DO n=1,nice
 
 ! Since sea-ice categories are not actually tiled for their surface
@@ -1358,6 +1387,7 @@ call cable_control7(                      &
 
   END IF
 
+print *, "jhan:sf_impl2_cable 25 "
 !-----------------------------------------------------------------------
 !!     Gridbox-mean surface temperature and net surface heat fluxes
 !-----------------------------------------------------------------------
@@ -1401,6 +1431,7 @@ call cable_control7(                      &
     ENDDO
   ENDIF
 
+print *, "jhan:sf_impl2_cable 26 "
   IF (l_sice_new_code) THEN
 
     DO j=tdims%j_start,tdims%j_end
@@ -1465,6 +1496,7 @@ call cable_control7(                      &
 
   ELSE   ! Use old code
 
+print *, "jhan:sf_impl2_cable 27 "
     DO j=tdims%j_start,tdims%j_end
       DO i=tdims%i_start,tdims%i_end
         surf_ht_flux_sice_sm(i,j) = 0.
@@ -1527,6 +1559,7 @@ call cable_control7(                      &
 
   END IF
 
+print *, "jhan:sf_impl2_cable 28 "
 ! Convert sea and sea-ice fluxes to be fraction of grid-box
 ! (as required by sea and sea-ice modellers)
   DO j=tdims%j_start,tdims%j_end
@@ -1549,6 +1582,7 @@ call cable_control7(                      &
 ! GBM diagnostic calculations
 !-----------------------------------------------------------------------
 
+print *, "jhan:sf_impl2_cable 29 "
   DO j=tdims%j_start,tdims%j_end
     DO i=tdims%i_start,tdims%i_end
       qim_1(i,j)=qw_1(i,j) + dqw1_1(i,j)-ctctq1(i,j)*fqw_1(i,j)
@@ -1613,6 +1647,7 @@ call cable_control7(                      &
   END DO
 
 
+print *, "jhan:sf_impl2_cable 30 "
 !-----------------------------------------------------------------------
 !!     Specific humidity and temperature at 1.5 metres.
 !-----------------------------------------------------------------------
@@ -1631,6 +1666,7 @@ call cable_control7(                      &
     lq_mix_bl                                                     &
     )
 
+print *, "jhan:sf_impl2_cable 31 "
 ! Release space allocated for the transitional diagnostic.
   DEALLOCATE(tstar_ssi_old)
   if (.not.l_sice_new_code) DEALLOCATE(tstar_sic)
@@ -1717,7 +1753,9 @@ ELSE ! L_correct = true: 2nd stage of the scheme
     END DO
   END DO
 
+print *, "jhan:sf_impl2_cable 32 "
 END IF ! IF .NOT. L_correct
+print *, "jhan:sf_impl2_cable 33 "
 
 IF (lhook) CALL dr_hook('SF_IMPL2',zhook_out,zhook_handle)
 RETURN

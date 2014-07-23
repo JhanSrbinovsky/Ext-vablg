@@ -1519,7 +1519,7 @@
             alpha_tr(k) = alpha_cd(k)
           ENDDO
         ENDIF
-
+print *, "jhan:ni_imp: 1"
 #if !defined(SCMA)
 ! Apply diags at last cycle only
         L_apply_diag = CycleNo == NumCycles
@@ -1618,6 +1618,7 @@
       L_combi_cld = L_plsp
 
 #endif
+print *, "jhan:ni_imp: 2"
       ! Note this will be affected by the anvil scheme if it is
       ! applied, i.e the cca at the anvil base may have been
       ! scaled by the anvil tower_factor.
@@ -1719,6 +1720,7 @@
 ! with cloud data.
 ! ---------------------------------------------------------------------
 
+print *, "jhan:ni_imp: 3"
         Do k = 1, bl_levels
           Do j = tdims%j_start, tdims%j_end
             Do i = tdims%i_start, tdims%i_end
@@ -1789,6 +1791,7 @@ END IF ! vatpoles
         End if
 
 
+print *, "jhan:ni_imp: 4"
 ! DEPENDS ON: imps_intct
         CALL IMPS_INTCT(halo_i,halo_j,offx,offy,pdims%i_end,pdims%j_end,&
                         n_rows,global_row_length, proc_row_group,  &
@@ -1901,6 +1904,7 @@ END IF ! vatpoles
 
 !       Release space used for the screen diagnostic.
         DEALLOCATE(f3_at_p)
+print *, "jhan:ni_imp: 5"
 
 
 ! add boundary layer increment to R_u and R_v

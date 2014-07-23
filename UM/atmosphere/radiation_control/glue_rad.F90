@@ -1250,22 +1250,7 @@ SUBROUTINE glue_rad (                                                   &
 
 ! needed for vatpoles for fv_cos_theta_latitude vs cos_theta_latitude
 REAL, POINTER :: xx_cos_theta_latitude (:,:)
-integer :: ii
-logical :: write122= .false.
-logical :: xwrite123=.false.
-logical :: write123= .false.
-logical :: write124= .false.
-logical :: write125= .false.
-logical :: write135= .false.
 
-if(write124) then
-   open(unit=124,file='grad.lw0',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(124,*) ,lw_incs(i,j,k)
-      enddo; enddo; enddo
-   close(124)
-endif   
   IF (lhook) CALL dr_hook('GLUE_RAD',zhook_in,zhook_handle)
   eps  = EPSILON(surfsw)
 
@@ -3062,24 +3047,6 @@ ipar=1
 ! is added in this routine
 ! ----------------------------------------------------------------------
 
-if(xwrite123) then
-   open(unit=123,file='grad.tlatest1',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(123,*) ,t_latest(i,j,k)
-      enddo; enddo; enddo
-   close(123)
-endif
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-      enddo; enddo; enddo
-if(write122) then
-   open(unit=122,file='glue_rad.inc1',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(122,*) 'theta ',t_inc(i,j,k)
-      enddo; enddo; enddo
-   close(122)
-endif
 ! DEPENDS ON: pc2_homog_plus_turb
       CALL pc2_homog_plus_turb(p_layer_centres(1,1,1),                  &
         wet_model_levels,                                               &
@@ -3109,9 +3076,8 @@ endif
           END DO
         END DO
       END DO
-print *, "glue_rad:true"
+
     ELSE  ! L_pc2
-print *, "glue_rad:false"
 
 ! add SW radiative heating to temperatures
       DO k = 1, model_levels
@@ -3126,14 +3092,6 @@ print *, "glue_rad:false"
 
     END IF  ! L_pc2
 
-if(write122) then
-   open(unit=122,file='glue_rad.inc2',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(122,*) 'theta ',t_inc(i,j,k)
-      enddo; enddo; enddo
-   close(122)
-endif      
 ! Get T_incr for output as STASH diagnostic
     IF ( ( l_t_incr_sw )                                                &
 #if !defined(SCMA)
@@ -3521,14 +3479,6 @@ endif
           i_off=0
         END IF
 
-if(xwrite123) then
-   open(unit=123,file='grad.2.tlatest',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(123,*) ,t_latest(i,j,k)
-      enddo; enddo; enddo
-   close(123)
-endif
 #if !defined(SCMA)
 ! DEPENDS ON: diagnostics_sw
         CALL diagnostics_sw(                                            &
@@ -3562,14 +3512,6 @@ endif
       END IF
     END DO
 
-if(write122) then
-   open(unit=122,file='glue_rad.3',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(122,*) 'theta ',t_inc(i,j,k)
-      enddo; enddo; enddo
-   close(122)
-endif      
 #if defined(SCMA)
     IF (l_scmdiags(scmdiag_rad)) THEN
 !     Output some SCM diagnostics for SW radiation
@@ -3880,7 +3822,6 @@ endif
               ( MAX(0.0, snow_tile(l,1)) +              &
               10.0 * z0_tile(l,1) * rho_snow_const ) )
           END IF
-!jhan:could this be leak
 !         Now temporarily over-write tstar_tile to replicate
 !         existing science.
           tstar_tile(l,1) = t_surf(i,j)
@@ -4190,16 +4131,7 @@ endif
           a_lw_radstep=a_lw_radstep_prog
           l_call_lwrad=.TRUE.
         END IF
-   print *, "jhan:grad:shape(lw_incs) ", shape(lw_incs)
 
-if(write124) then
-   open(unit=124,file='grad.lw1',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(124,*) ,lw_incs(i,j,k)
-      enddo; enddo; enddo
-   close(124)
-endif   
         IF (l_call_lwrad) THEN
 
 ! DEPENDS ON: prelim_lwrad
@@ -4234,14 +4166,6 @@ endif
             lw_points,                                                  &
             olr, lw_down, lwsea, top_absorption )
 
-if(write124) then
-   open(unit=124,file='grad.lw2',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(124,*) ,lw_incs(i,j,k)
-      enddo; enddo; enddo
-   close(124)
-endif   
 !Parallelise over segments.
 !$OMP  PARALLEL DEFAULT(SHARED)                                              &
 !$OMP& PRIVATE(i,j, lit_points,start_point,first_point,first_point_dust_a,   &
@@ -4432,55 +4356,6 @@ ipar=1
             l_scale_inc = .TRUE.
 
 
-if(write125) then
-   open(unit=125,file='grad125.lw1',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do ii=1,row_length; do j=1,rows;do k=1,model_levels
-         WRITE(125,*) ,lw_incs(ii,j,k)
-      enddo; enddo; enddo
-      WRITE(125,*) "" 
-   close(125)
-   !open(unit=125,file='grad125.inc1',status="unknown", &
-   !     action="write", form="formatted",position='append' )
-   !   do ii=1,row_length; do j=1,rows;do k=1,model_levels
-   !            WRITE(125,*) 'theta ',t_inc(ii,j,k)
-   !   enddo; enddo; enddo
-   !   WRITE(125,*) "" 
-   !close(125)
-   !open(unit=125,file='grad123.tlatest1',status="unknown", &
-   !     action="write", form="formatted",position='append' )
-   !   do ii=1,row_length; do j=1,rows;do k=1,model_levels
-   !      WRITE(125,*) ,t_latest(ii,j,k)
-   !   enddo; enddo; enddo
-   !   WRITE(125,*) "" 
-   !close(125)
-endif   
-
-if(write135) then
-   open(unit=135,file='grad135.land1',status="unknown", &
-        action="write", form="formatted",position='append' )
-   open(unit=136,file='grad136.flandg1',status="unknown", &
-        action="write", form="formatted",position='append' )
-   open(unit=137,file='grad137.ice1',status="unknown", &
-        action="write", form="formatted",position='append' )
-   open(unit=138,file='grad138.snow1',status="unknown", &
-        action="write", form="formatted",position='append' )
-   open(unit=139,file='grad139.emis1',status="unknown", &
-        action="write", form="formatted",position='append' )
-            write(135,*) land0p5
-            write(136,*) flandg
-            write(137,*) ice_fract
-            write(138,*) snow_depth
-            write(139,*) emis_land
-   close(135)
-   close(136)
-   close(137)
-   close(138)
-   close(139)
-endif   
-   emis_land=0.4
- 
-
 ! DEPENDS ON: r2_lwrad3z
             CALL r2_lwrad3z(error_code,                                 &
 ! Input data
@@ -4624,44 +4499,9 @@ endif
 ! COSP input arguments
   cosp_gbx)
 
-if(write125) then
-   open(unit=125,file='grad125.lw2',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do ii=1,row_length; do j=1,rows;do k=1,model_levels
-         WRITE(125,*) ,lw_incs(ii,j,k)
-      enddo; enddo; enddo
-      WRITE(125,*) "" 
-   close(125)
-   !open(unit=125,file='grad125.inc2',status="unknown", &
-   !     action="write", form="formatted",position='append' )
-   !   do ii=1,row_length; do j=1,rows;do k=1,model_levels
-   !            WRITE(125,*) 'theta ',t_inc(ii,j,k)
-   !   enddo; enddo; enddo
-   !   WRITE(125,*) "" 
-   !close(125)
-   !open(unit=125,file='grad123.tlatest2',status="unknown", &
-   !     action="write", form="formatted",position='append' )
-   !   do ii=1,row_length; do j=1,rows;do k=1,model_levels
-   !      WRITE(125,*) ,t_latest(ii,j,k)
-   !   enddo; enddo; enddo
-   !   WRITE(125,*) "" 
-   !close(125)
-endif   
-
-
             DEALLOCATE(map_channel)
 
           END DO ! end loop over long-wave segments
-
-if(write124) then
-   open(unit=124,file='grad.lw3',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-         WRITE(124,*) ,lw_incs(i,j,k)
-      enddo; enddo; enddo
-   close(124)
-endif   
-
 
 ! Deallocate the segmentation arrays
           DEALLOCATE( first_point_local )
@@ -4750,14 +4590,6 @@ endif
         END IF ! if radiation call required
       END DO ! loop over radiation calls
 
-if(write124) then
-   open(unit=124,file='grad.lw4',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(124,*) ,lw_incs(i,j,k)
-      enddo; enddo; enddo
-   close(124)
-endif   
 
       IF (l_rad_perturb.AND.l_rad_step_prog) THEN
 
@@ -4836,39 +4668,13 @@ endif
 ! Homogeneous forcing. Note the temperature increment from longwave
 ! is added in this routine
 ! ----------------------------------------------------------------------
-if(write123) then
-   open(unit=123,file='grad.3.tlatest',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(123,*) ,t_latest(i,j,k)
-      enddo; enddo; enddo
-   close(123)
-endif   
 
-if(write124) then
-   open(unit=124,file='grad.lw5',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(124,*) ,lw_incs(i,j,k)
-      enddo; enddo; enddo
-   close(124)
-endif
       CALL pc2_homog_plus_turb(p_layer_centres(1,1,1),                  &
         wet_model_levels,                                               &
         timestep, t_latest, cf_latest, cfl_latest,                      &
         cff_latest, q_latest, qcl_latest, lw_incs(1,1,1),               &
         zeros, zeros, zeros, 0.0, 0.0,                                  &
         l_mixing_ratio)
-
-if(write123) then
-   open(unit=123,file='grad.t_lat4',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(123,*) ,t_latest(i,j,k)
-      enddo; enddo; enddo
-   close(123)
-endif   
-
 
 ! Add increments from the homogeneous forcing to the increment variables
       DO k = 1, model_levels
@@ -4892,9 +4698,7 @@ endif
         END DO
       END DO
 
-print *, "glue_rad2:true"
     ELSE  ! L_pc2
-print *, "glue_rad2:false"
 
       DO k = 1, model_levels
         DO j = 1, rows
@@ -4908,34 +4712,6 @@ print *, "glue_rad2:false"
 
     END IF  ! L_pc2
 
-
-if(write122) then
-   open(unit=122,file='glue_rad.4.tn',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(122,*) ,t_n(i,j,k)
-      enddo; enddo; enddo
-   close(122)
-endif   
-
-if(write122) then
-   open(unit=122,file='glue_rad.4.tinc',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(122,*) ,t_inc(i,j,k)
-      enddo; enddo; enddo
-   close(122)
-endif   
-
-if(write122) then
-   open(unit=122,file='glue_rad.4.tlat',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(122,*) ,t_latest(i,j,k)
-      enddo; enddo; enddo
-   close(122)
-endif  
- 
 ! Get T_incr for output as STASH diagnostic
     IF ( l_t_incr_lw ) THEN  ! STASHflag set
       ALLOCATE ( t_incr_diagnostic(row_length,rows,model_levels) )
@@ -5363,14 +5139,6 @@ ipar=1
           i_off=0
         END IF
 
-if(write122) then
-   open(unit=122,file='glue_rad.5',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(122,*) 'theta ',t_inc(i,j,k)
-      enddo; enddo; enddo
-   close(122)
-endif   
 #if !defined(SCMA)
 ! DEPENDS ON: diagnostics_lw
         CALL diagnostics_lw(                                            &
@@ -5404,14 +5172,6 @@ endif
 
       END IF
     END DO
-if(write122) then
-   open(unit=122,file='glue_rad.6',status="unknown", &
-        action="write", form="formatted",position='append' )
-      do i=1,row_length; do j=1,rows;do k=1,model_levels
-               WRITE(122,*) 'theta ',t_inc(i,j,k)
-      enddo; enddo; enddo
-   close(122)
-endif   
 
 #if defined(SCMA)
     IF (l_scmdiags(scmdiag_rad)) THEN

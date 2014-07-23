@@ -234,6 +234,8 @@ SUBROUTINE cable_explicit_driver( row_length, rows, land_pts, ntiles,npft,     &
  
    INTEGER, SAVE ::  iDiag0=0,iDiag1=0, iDiag2=0
     
+   INTEGER :: i,j
+
    !isnow_flg3l = floor( snow_flg3l )
    isnow_flg3l = int( snow_flg3l )
 
@@ -267,8 +269,37 @@ print *, "jhan:cable_explicit1 "
       CALL cable_um_runtime_vars(runtime_vars_file) 
       first_cable_call = .FALSE.
    ENDIF      
-
-
+!integer :: jhistart, jhiend, jhjstart, jhjend, jhkstart, jhkend 
+!integer :: jhi, jhj, jhk
+!logical, parameter :: write125=.false.
+!logical, save :: first_call = .true.
+!
+!jhistart = 1-offx
+!jhiend = row_length+offx
+!jhjstart = 1-offy
+!jhjend = rows+offy
+!jhkstart = 0
+!jhkend = model_levels
+!
+!
+!      IF (lhook) CALL dr_hook('EG_HELM_RHS_STAR',zhook_in,zhook_handle)
+!
+!if(write125) then
+!   open(unit=125,file='s_th.1',status="unknown", &
+!        action="write", form="formatted",position='append' )
+!      do jhi=jhistart,jhiend; do jhj=jhjstart,jhjend;do jhk=jhkstart,jhkend
+!         WRITE(125,*) ,s_thetav(jhi,jhj,jhk)
+!      enddo; enddo; enddo
+!      WRITE(125,*) "" 
+!   close(125)
+! endif 
+ 
+!   do i=1,land_pts   
+!   do j=1, ntiles
+!   if(tile_index(i,j)>1000 .OR. tile_index(i,j) < 0 ) &
+!      print *, "jhan:explicit tile_index", tile_index(i,j)
+!   enddo   
+!   enddo   
    !---------------------------------------------------------------------!
    !--- initialize CABLE using UM forcings etc. these args are passed ---!
    !--- down from UM.                                                 ---! 

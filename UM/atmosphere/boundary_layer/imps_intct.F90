@@ -817,6 +817,7 @@ SUBROUTINE imps_intct (                                                 &
 
   IF (lhook) CALL dr_hook('IMPS_INTCT',zhook_in,zhook_handle)
 
+print *, "jhan:imps: 1"
 ! DEPENDS ON: imp_solver
     CALL imp_solver (                                                   &
 
@@ -929,6 +930,7 @@ SUBROUTINE imps_intct (                                                 &
      ltimer                                                             &
      )
 
+print *, "jhan:imps: 2"
   IF (lhook) CALL dr_hook('IMPS_INTCT',zhook_out,zhook_handle)
   RETURN
 END SUBROUTINE imps_intct

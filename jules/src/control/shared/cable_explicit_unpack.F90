@@ -216,21 +216,21 @@ SUBROUTINE cable_expl_unpack( FTL_TILE, FQW_TILE,       &
       ENDIF
 
       if(L_fudge) then
-         call fudge_out( 1,1, ftl_tile, 'ftl_tile' )
-         call fudge_out( 1,1, fqw_tile, 'fqw_tile' )
-         call fudge_out( 1,1, tstar_tile, 'tstar_tile' )
-         call fudge_out( 1,1, z0m_tile, 'z0m_tile' )
-         call fudge_out( 1,1, U_s_tile, 'U_s_tile' )
-         call fudge_out( 1,1, CD_tile, 'CD_tile' )
-         call fudge_out( 1,1, CH_tile, 'CH_tile' )
-         call fudge_out( 1,1, fraca, 'fraca' )
-         call fudge_out( 1,1, resft, 'resft' )
-         call fudge_out( 1,1, resfs, 'resfs' )
-         call fudge_out( 1,1, radnet_tile, 'radnet_tile' )
-         call fudge_out( 1,1, recip_L_MO_tile, 'recip_L_MO_tile' )
-         call fudge_out( 1,1, epot_tile, 'epot_tile' )
+         call fudge_out( 1,1, ftl_tile,   'ftl_tile',    .TRUE., 0. )
+         call fudge_out( 1,1, fqw_tile,   'fqw_tile',    .TRUE., 0.  )
+         call fudge_out( 1,1, tstar_tile, 'tstar_tile',  .TRUE., 0. )
+         call fudge_out( 1,1, z0m_tile,   'z0m_tile',    .TRUE., 0.  )
+         call fudge_out( 1,1, U_s_tile,   'U_s_tile',    .TRUE., 0.  )
+         call fudge_out( 1,1, CD_tile,    'CD_tile',     .TRUE., 0.  )
+         call fudge_out( 1,1, CH_tile,    'CH_tile',     .TRUE., 0.  )
+         call fudge_out( 1,1, fraca,      'fraca',       .TRUE., 0.  )
+         call fudge_out( 1,1, resft,      'resft',       .TRUE., 0.  )
+         call fudge_out( 1,1, resfs,      'resfs',       .TRUE., 0.  )
+         call fudge_out( 1,1, epot_tile,  'epot_tile',   .TRUE., 0.  )
+         call fudge_out( 1,1, radnet_tile,'radnet_tile',   .TRUE., 0.  )
+         call fudge_out( 1,1, recip_L_MO_tile, 'recip_L_MO_tile',    .TRUE., 0.  )
       endif 
-
+   write( 6,'("End of cable_explicit_UNPACK")' )
 END SUBROUTINE cable_expl_unpack
     
 !============================================================================
